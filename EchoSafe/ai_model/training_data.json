@@ -1,0 +1,62 @@
+[
+  {
+    "text": "There is a threat to my safety",
+    "urgency": 0.95
+  },
+  {
+    "text": "Physical violence occurred today",
+    "urgency": 0.95
+  },
+  {
+    "text": "Emergency situation immediate help needed",
+    "urgency": 0.9
+  },
+  {
+    "text": "Dangerous behavior in workplace",
+    "urgency": 0.85
+  },
+  {
+    "text": "Someone threatened me with violence",
+    "urgency": 0.9
+  },
+  {
+    "text": "Harassment continues daily",
+    "urgency": 0.65
+  },
+  {
+    "text": "Discrimination in hiring process",
+    "urgency": 0.6
+  },
+  {
+    "text": "Inappropriate comments from manager",
+    "urgency": 0.55
+  },
+  {
+    "text": "Conflict with coworker ongoing",
+    "urgency": 0.5
+  },
+  {
+    "text": "Unfair treatment at work",
+    "urgency": 0.45
+  },
+  {
+    "text": "Minor issue needs attention",
+    "urgency": 0.3
+  },
+  {
+    "text": "Small scheduling problem",
+    "urgency": 0.25
+  },
+  {
+    "text": "General feedback about policies",
+    "urgency": 0.2
+  },
+  {
+    "text": "Suggestion for improvement",
+    "urgency": 0.15
+  },
+  {
+    "text": "Administrative question",
+    "urgency": 0.1
+  }
+]

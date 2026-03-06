@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EchoSafe - Anonymous Reporting</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .tab-button {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #999;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab-button.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .button:active {
+            transform: translateY(0);
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid #f5c6cb;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            color: #004085;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid #bee5eb;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .case-id-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border: 1px solid #dee2e6;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .copy-button {
+            background: #28a745;
+            padding: 8px 16px;
+            margin-top: 10px;
+            font-size: 14px;
+            width: auto;
+        }
+
+        .copy-button:hover {
+            background: #218838;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        .report-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .report-card:hover {
+            background: #e9ecef;
+            border-color: #667eea;
+        }
+
+        .report-card .case-id {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #666;
+            word-break: break-all;
+            margin-bottom: 8px;
+        }
+
+        .urgency-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .urgency-high {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .urgency-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .urgency-low {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .status-pending {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        .status-investigating {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-resolved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .report-detail {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin-top: 20px;
+            border: 1px solid #dee2e6;
+        }
+
+        .report-detail p {
+            color: #333;
+            line-height: 1.8;
+            word-break: break-word;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 40px;
+            border-radius: 12px;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .close-button {
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #aaa;
+            transition: color 0.2s ease;
+        }
+
+        .close-button:hover {
+            color: #000;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 EchoSafe</h1>
+            <p>Anonymous, Encrypted Reporting Platform</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-button active" data-tab="submit">Submit Report</button>
+            <button class="tab-button" data-tab="check">Check Report</button>
+            <button class="tab-button" data-tab="login">HR Dashboard</button>
+        </div>
+
+        <!-- SUBMIT REPORT TAB -->
+        <div id="submit" class="tab-content active">
+            <div class="info-box">
+                ✓ Your report is completely anonymous<br>
+                ✓ End-to-End Encrypted (AES-256)<br>
+                ✓ AI-powered priority assessment<br>
+                ✓ Only accessible with your Case ID
+            </div>
+
+            <form id="reportForm">
+                <div class="form-group">
+                    <label for="reportText">Your Report</label>
+                    <textarea id="reportText" placeholder="Describe your concern in detail..." required></textarea>
+                </div>
+                <button type="submit" class="button">Submit Report</button>
+            </form>
+
+            <div id="submitMessage"></div>
+        </div>
+
+        <!-- CHECK REPORT TAB -->
+        <div id="check" class="tab-content">
+            <div class="info-box">
+                Enter your Case ID to view your encrypted report
+            </div>
+
+            <form id="checkForm">
+                <div class="form-group">
+                    <label for="caseIdCheck">Case ID</label>
+                    <input type="text" id="caseIdCheck" placeholder="Your Case ID..." required>
+                </div>
+                <button type="submit" class="button">View Report</button>
+            </form>
+
+            <div id="checkMessage"></div>
+        </div>
+
+        <!-- HR LOGIN TAB -->
+        <div id="login" class="tab-content">
+            <div id="hrView"></div>
+        </div>
+    </div>
+
+    <!-- REPORT DETAIL MODAL -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+
+        // Tab switching
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tabName = e.target.dataset.tab;
+                document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+                document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                document.getElementById(tabName).classList.add('active');
+                e.target.classList.add('active');
+
+                if (tabName === 'login') {
+                    loadHRView();
+                }
+            });
+        });
+
+        // ============ SUBMIT REPORT ============
+        document.getElementById('reportForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const reportText = document.getElementById('reportText').value;
+            const messageDiv = document.getElementById('submitMessage');
+
+            try {
+                messageDiv.innerHTML = '<div class="spinner"></div>';
+
+                const response = await fetch(`${API_BASE}/submit_report`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ report_text: reportText })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    messageDiv.innerHTML = `
+                        <div class="success-message">
+                            <strong>✓ Report Submitted Successfully!</strong><br>
+                            Your report has been encrypted and securely stored.<br><br>
+                            <strong>Keep this Case ID safe:</strong>
+                            <div class="case-id-box">${data.case_id}</div>
+                            <button class="button copy-button" onclick="copyToClipboard('${data.case_id}')">Copy Case ID</button>
+                        </div>
+                    `;
+                    document.getElementById('reportText').value = '';
+                } else {
+                    messageDiv.innerHTML = `<div class="error-message">${data.detail || 'Error submitting report'}</div>`;
+                }
+            } catch (error) {
+                messageDiv.innerHTML = `<div class="error-message">Error: ${error.message}</div>`;
+            }
+        });
+
+        // ============ CHECK REPORT ============
+        document.getElementById('checkForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const caseId = document.getElementById('caseIdCheck').value;
+            const messageDiv = document.getElementById('checkMessage');
+
+            try {
+                messageDiv.innerHTML = '<div class="spinner"></div>';
+
+                const response = await fetch(`${API_BASE}/report/${caseId}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    messageDiv.innerHTML = `
+                        <div class="success-message">
+                            <strong>✓ Report Found</strong><br>
+                            Your report is encrypted and ready to view (requires decryption key).
+                            <div class="case-id-box">
+                                <strong>Ciphertext (first 100 chars):</strong><br>
+                                ${data.ciphertext.substring(0, 100)}...
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    messageDiv.innerHTML = `<div class="error-message">${data.detail || 'Report not found'}</div>`;
+                }
+            } catch (error) {
+                messageDiv.innerHTML = `<div class="error-message">Error: ${error.message}</div>`;
+            }
+        });
+
+        // ============ HR DASHBOARD ============
+        let hrToken = localStorage.getItem('hrToken');
+
+        async function loadHRView() {
+            hrToken = localStorage.getItem('hrToken');  // Refresh token
+            const hrView = document.getElementById('hrView');
+
+            if (!hrToken) {
+                hrView.innerHTML = `
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" placeholder="Username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" placeholder="Password" required>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="button" style="flex: 1;" onclick="hrLogin()">Login</button>
+                        <button class="button" style="flex: 1;" onclick="hrRegister()">Register</button>
+                    </div>
+                    <div id="authMessage"></div>
+                `;
+            } else {
+                await loadDashboard();
+            }
+        }
+
+        async function hrLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const authMessage = document.getElementById('authMessage');
+
+            try {
+                const response = await fetch(`${API_BASE}/hr/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    hrToken = data.token;
+                    localStorage.setItem('hrToken', hrToken);
+                    await loadDashboard();
+                } else {
+                    authMessage.innerHTML = `<div class="error-message">${data.detail || 'Login failed'}</div>`;
+                }
+            } catch (error) {
+                authMessage.innerHTML = `<div class="error-message">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function hrRegister() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const authMessage = document.getElementById('authMessage');
+
+            if (!username || !password) {
+                authMessage.innerHTML = `<div class="error-message">Username and password required</div>`;
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/hr/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    authMessage.innerHTML = `<div class="success-message">Registration successful! Please login.</div>`;
+                } else {
+                    authMessage.innerHTML = `<div class="error-message">${data.detail || 'Registration failed'}</div>`;
+                }
+            } catch (error) {
+                authMessage.innerHTML = `<div class="error-message">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function loadDashboard() {
+            const hrView = document.getElementById('hrView');
+            hrView.innerHTML = '<div class="spinner"></div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/hr/dashboard?token=${hrToken}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    let html = `
+                        <div class="success-message">
+                            Welcome back, <strong>${data.investigator}</strong>!
+                            <button class="button copy-button" onclick="logout()" style="margin-top: 10px;">Logout</button>
+                            <button class="button copy-button" onclick="downloadReportsPDF()" style="margin-top: 10px; margin-left: 10px;">Download as PDF</button>
+                        </div>
+                        <h3 style="margin: 20px 0 15px 0; color: #333;">Cases (${data.reports.length} total)</h3>
+                        <div class="dashboard-grid">
+                    `;
+
+                    data.reports.forEach(report => {
+                        const urgency = report.urgency_score;
+                        let urgencyClass = urgency > 0.6 ? 'urgency-high' : (urgency > 0.3 ? 'urgency-medium' : 'urgency-low');
+                        let urgencyLabel = urgency > 0.6 ? 'HIGH' : (urgency > 0.3 ? 'MEDIUM' : 'LOW');
+
+                        html += `
+                            <div class="report-card" onclick="viewReportDetail('${report.case_id}')">
+                                <div class="case-id">${report.case_id.substring(0, 16)}...</div>
+                                <span class="urgency-badge ${urgencyClass}">Priority: ${urgencyLabel} (${(urgency * 100).toFixed(0)}%)</span>
+                                <span class="status-badge status-${report.status}">${report.status.toUpperCase()}</span>
+                                <div style="font-size: 12px; color: #999; margin-top: 10px;">${report.created_at}</div>
+                            </div>
+                        `;
+                    });
+
+                    html += `</div>`;
+                    hrView.innerHTML = html;
+                }
+            } catch (error) {
+                hrView.innerHTML = `<div class="error-message">Error loading dashboard: ${error.message}</div>`;
+            }
+        }
+
+        async function viewReportDetail(caseId) {
+            const modal = document.getElementById('reportModal');
+            const modalBody = document.getElementById('modalBody');
+            modalBody.innerHTML = '<div class="spinner"></div>';
+            modal.classList.add('active');
+
+            try {
+                const tokenToSend = hrToken || localStorage.getItem('hrToken');
+                const response = await fetch(`${API_BASE}/hr/decrypt_report`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ case_id: caseId, token: tokenToSend })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    modalBody.innerHTML = `
+                        <h2 style="margin-bottom: 20px;">Case Report</h2>
+                        <div class="report-detail">
+                            <strong>Case ID:</strong> ${data.case_id}<br><br>
+                            <strong>Report:</strong><br>
+                            <p>${data.report_text}</p>
+                        </div>
+                        <div style="margin-top: 20px; display: flex; gap: 10px;">
+                            <button class="button" onclick="updateStatus('${caseId}', 'investigating')" style="flex: 1;">Mark Investigating</button>
+                            <button class="button" onclick="updateStatus('${caseId}', 'resolved')" style="flex: 1;">Mark Resolved</button>
+                        </div>
+                    `;
+                } else {
+                    modalBody.innerHTML = `<div class="error-message">${data.detail || 'Error loading report'}</div>`;
+                }
+            } catch (error) {
+                modalBody.innerHTML = `<div class="error-message">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function updateStatus(caseId, status) {
+            try {
+                const tokenToSend = hrToken || localStorage.getItem('hrToken');
+                const response = await fetch(`${API_BASE}/hr/update_status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ case_id: caseId, status: status, token: tokenToSend })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    closeModal();
+                    await loadDashboard();
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        function logout() {
+            hrToken = null;
+            localStorage.removeItem('hrToken');
+            loadHRView();
+        }
+
+        function closeModal() {
+            document.getElementById('reportModal').classList.remove('active');
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Case ID copied to clipboard!');
+            });
+        }
+
+        async function downloadReportsPDF() {
+            try {
+                const tokenToSend = hrToken || localStorage.getItem('hrToken');
+                const response = await fetch(`${API_BASE}/hr/export_pdf?token=${tokenToSend}`);
+                if (!response.ok) throw new Error('Failed to export PDF');
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `echosafe_reports_${new Date().toISOString().split('T')[0]}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+            } catch (error) {
+                alert('Error downloading PDF: ' + error.message);
+            }
+        }
+
+        document.querySelector('.close-button').addEventListener('click', closeModal);
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('reportModal');
+            if (e.target === modal) closeModal();
+        });
+    </script>
+</body>
+</html>

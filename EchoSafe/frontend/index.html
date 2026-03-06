@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EchoSafe - Anonymous Reporting</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #667eea;
+            --accent-2: #764ba2;
+            --bg: #ffffff;
+            --text: #0f172a;
+            --border: #e5e7eb;
+            --shadow: rgba(15, 23, 42, 0.15);
+        }
+
+        body.dark-mode {
+            --bg: #1a1a2e;
+            --text: #e4e4e7;
+            --border: #404040;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: var(--bg);
+            color: var(--text);
+            border-radius: 16px;
+            box-shadow: 0 18px 48px var(--shadow);
+            max-width: 1200px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        /* navigation bar */
+        .navbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 30px;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+        .nav-links a {
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .nav-links a.active {
+            color: var(--accent);
+        }
+
+        /* cards on homepage */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit,minmax(250px,1fr));
+            gap: 24px;
+            padding: 40px;
+        }
+        .card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            box-shadow: 0 4px 12px var(--shadow);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+        body.dark-mode .card {
+            background: #1f2937;
+            border-color: var(--border);
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px var(--shadow);
+        }
+        .card h3 {
+            margin-top: 12px;
+            margin-bottom: 8px;
+            font-size: 18px;
+        }
+        .card p {
+            font-size: 14px;
+            color: var(--gray, #666);
+        }
+
+        /* section pages */
+        section.page {
+            display: none;
+            padding: 40px;
+        }
+        section.page.active {
+            display: block;
+        }
+
+        /* FAQ accordion */
+        .faq-item {
+            background: var(--light);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        .faq-item p {
+            display: none;
+            margin-top: 8px;
+            color: var(--text);
+        }
+        .faq-item.open p {
+            display: block;
+        }
+
+        .guidance-content h3 {
+            margin-top: 20px;
+            color: var(--accent);
+        }
+        .guidance-content a {
+            color: var(--accent);
+        }
+        body.dark-mode .guidance-content a {
+            color: #a5b4fc;
+        }
+
+        /* layout for guidance page columns */
+        .guidance-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit,minmax(280px,1fr));
+            gap: 32px;
+        }
+        .guidance-content section {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 12px var(--shadow);
+        }
+        body.dark-mode .guidance-content section {
+            background: #1f2937;
+            border-color: var(--border);
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+            color: white;
+            text-align: center;
+            padding: 28px 30px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 15px;
+            opacity: 0.9;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0;
+            background: #fbfcfe;
+            border-bottom: 1px solid #eef2ff;
+            padding: 0;
+        }
+
+        body.dark-mode .tabs {
+            background: var(--bg);
+            border-bottom-color: var(--border);
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 16px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 15px;
+            color: #666;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        body.dark-mode .tab-button {
+            color: #b4b4b4;
+        }
+
+        .tab-button:hover {
+            color: #667eea;
+        }
+
+        .tab-button.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            background: var(--bg);
+        }
+
+        .content {
+            padding: 36px 48px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        body.dark-mode .form-group label {
+            color: var(--text);
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            background-color: white;
+            color: #333;
+        }
+
+        body.dark-mode .form-group input,
+        body.dark-mode .form-group textarea {
+            background-color: var(--bg);
+            color: var(--text);
+            border-color: var(--border);
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .button {
+            width: 100%;
+            padding: 13px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .button:active {
+            transform: translateY(0);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .button-group .button {
+            flex: 1;
+        }
+
+        .button.secondary {
+            background: #e8f0fe;
+            color: #667eea;
+        }
+
+        body.dark-mode .button.secondary {
+            background: rgba(102, 126, 234, 0.2);
+            color: #8fa5f5;
+        }
+
+        .button.secondary:hover {
+            background: #d0e0fc;
+        }
+
+        body.dark-mode .button.secondary:hover {
+            background: rgba(102, 126, 234, 0.3);
+        }
+
+        .message {
+            padding: 14px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        body.dark-mode .success-message {
+            background: rgba(40, 167, 69, 0.2);
+            color: #7dc98e;
+            border-color: rgba(40, 167, 69, 0.5);
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        body.dark-mode .error-message {
+            background: rgba(220, 53, 69, 0.2);
+            color: #f5a6a6;
+            border-color: rgba(220, 53, 69, 0.5);
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            color: #004085;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #bee5eb;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .case-id-box {
+            background: #f5f5f5;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #e0e0e0;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #333;
+        }
+
+        .copy-button {
+            background: #28a745;
+            padding: 8px 16px;
+            margin-top: 10px;
+            font-size: 14px;
+            width: auto;
+            display: inline-block;
+        }
+
+        .copy-button:hover {
+            background: #218838;
+        }
+
+        .login-form {
+            max-width: 100%;
+        }
+
+        .login-card {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid #e9ecef;
+        }
+
+        /* Toast */
+        #toast {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            z-index: 2000;
+            min-width: 220px;
+            pointer-events: none;
+        }
+        .toast-item {
+            pointer-events: auto;
+            background: rgba(0,0,0,0.85);
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-top: 8px;
+            box-shadow: 0 6px 18px rgba(11,22,50,0.2);
+            font-size: 14px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        .report-card {
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .report-card:hover {
+            background: #e9ecef;
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .report-card .case-id {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #999;
+            word-break: break-all;
+            margin-bottom: 10px;
+        }
+
+        .urgency-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .urgency-high {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .urgency-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .urgency-low {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .status-pending {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        .status-investigating {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-resolved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .report-detail {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 1px solid #e9ecef;
+        }
+
+        .report-detail p {
+            color: #333;
+            line-height: 1.8;
+            word-break: break-word;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 40px;
+            border-radius: 12px;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .close-button {
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #aaa;
+            transition: color 0.2s ease;
+            margin-top: -10px;
+            margin-right: -10px;
+        }
+
+        .close-button:hover {
+            color: #000;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .divider {
+            text-align: center;
+            margin: 20px 0;
+            color: #999;
+            font-size: 13px;
+        }
+
+        .divider::before {
+            content: '';
+            display: block;
+            height: 1px;
+            background: #e0e0e0;
+            margin-bottom: 10px;
+        }
+
+        .welcome-header {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .welcome-header strong {
+            font-size: 18px;
+        }
+
+        @media (max-width: 600px) {
+            .content {
+                padding: 25px;
+            }
+
+            .header {
+                padding: 30px 20px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- header / navbar -->
+        <div class="navbar">
+            <div class="logo"><strong>EchoSafe</strong></div>
+            <div class="nav-links">
+                <a href="#" data-page="home" class="active">Home</a>
+                <a href="#" data-page="submit">Submit Report</a>
+                <a href="#" data-page="guidance">Guidance &amp; Support</a>
+                <a href="#" data-page="faq">FAQ</a>
+            </div>
+            <div class="nav-right">
+                <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+                <span style="margin-left:20px; font-size:14px;">Anonymous User (victim)</span>
+                <button class="btn btn-secondary" style="margin-left:12px; padding:4px 8px;" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <!-- pages -->
+        <section id="home" class="page active">
+            <div class="card-grid">
+                <div class="card" onclick="switchPage('submit')">
+                    <div>📝</div>
+                    <h3>Submit a Report</h3>
+                    <p>Report workplace harassment anonymously and securely. Your identity is protected.</p>
+                </div>
+                <div class="card" onclick="switchPage('guidance')">
+                    <div>📚</div>
+                    <h3>Guidance &amp; Support</h3>
+                    <p>Access resources for legal help, mental health support, and whistleblower protection.</p>
+                </div>
+                <div class="card" onclick="switchPage('faq')">
+                    <div>❓</div>
+                    <h3>FAQ</h3>
+                    <p>Find answers to common questions about the reporting process and platform security.</p>
+                </div>
+                <div class="card" onclick="alert('If in immediate danger, call emergency services.')">
+                    <div>🚨</div>
+                    <h3>Emergency Resources</h3>
+                    <p>If you're in immediate danger, please contact emergency services or use crisis resources.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="submit" class="page">
+            <!-- existing submit/check content moved here -->
+            <div class="content">
+                <div class="info-box">
+                    Your report is encrypted end-to-end. No identifiable information is stored.
+                </div>
+                <form id="reportForm">
+                    <div class="form-group">
+                        <label for="reportText">Report Details (Anonymous)</label>
+                        <textarea id="reportText" placeholder="Describe your concern or report..." required></textarea>
+                    </div>
+                    <button type="submit" class="button">Submit Anonymously</button>
+                    <div id="submitMessage"></div>
+                </form>
+                <div class="divider">or</div>
+                <div class="info-box">
+                    Enter your Case ID to view your report status.
+                </div>
+                <form id="checkForm">
+                    <div class="form-group">
+                        <label for="caseIdInput">Your Case ID</label>
+                        <input type="text" id="caseIdInput" placeholder="Paste your Case ID here..." required>
+                    </div>
+                    <button type="submit" class="button">View Report</button>
+                </form>
+                <div id="checkMessage"></div>
+            </div>
+        </section>
+
+        <section id="guidance" class="page">
+            <h2>Guidance &amp; Support</h2>
+            <div class="guidance-content">
+                <section>
+                    <h3>Legal Help</h3>
+                    <p>Workplace harassment is illegal under various federal and state laws. You have the right to work in an environment free from harassment and discrimination.</p>
+                    <ul>
+                        <li>Title VII of the Civil Rights Act</li>
+                        <li>Americans with Disabilities Act (ADA)</li>
+                        <li>Age Discrimination in Employment Act (ADEA)</li>
+                        <li>Equal Pay Act</li>
+                    </ul>
+                    <p>Legal resources:</p>
+                    <ul>
+                        <li><a href="#">Equal Employment Opportunity Commission (EEOC)</a></li>
+                        <li><a href="#">Workplace Fairness</a></li>
+                        <li><a href="#">American Bar Association - Workplace Harassment Resources</a></li>
+                    </ul>
+                </section>
+                <section>
+                    <h3>Mental Health Support</h3>
+                    <p>Experiencing harassment can be emotionally draining. Here are some strategies that may help:</p>
+                    <ul>
+                        <li>Practice self-care and mindfulness</li>
+                        <li>Maintain a support network of trusted friends and family</li>
+                        <li>Set boundaries to protect your wellbeing</li>
+                        <li>Keep a journal to process your experiences</li>
+                        <li>Seek professional help when needed</li>
+                    </ul>
+                    <p>Mental health resources:</p>
+                    <ul>
+                        <li><a href="#">National Alliance on Mental Illness (NAMI)</a></li>
+                        <li><a href="#">Substance Abuse and Mental Health Services Administration (SAMHSA)</a></li>
+                        <li><a href="#">Talkspace Online Therapy</a></li>
+                    </ul>
+                    <div style="background:#ffe2e2;padding:12px;border-radius:6px;margin-top:12px;">
+                        <strong>Crisis Support:</strong> National Suicide Prevention Lifeline: 1-800-273-8255<br>
+                        Crisis Text Line: Text HOME to 741741
+                    </div>
+                </section>
+                <section>
+                    <h3>Whistleblower Protection</h3>
+                    <p>Whistleblower laws protect employees who report illegal activities or dangers to public health and safety. These protections are designed to shield you from retaliation.</p>
+                    <ul>
+                        <li>Whistleblower Protection Act</li>
+                        <li>Sarbanes-Oxley Act (for corporate whistleblowers)</li>
+                        <li>False Claims Act</li>
+                        <li>Occupational Safety and Health Act (OSHA)</li>
+                    </ul>
+                    <p>What constitutes retaliation?</p>
+                    <ul>
+                        <li>Termination or demotion</li>
+                        <li>Reduction in hours or pay</li>
+                        <li>Reassignment to less desirable duties</li>
+                        <li>Hostile work environment</li>
+                        <li>Threats or intimidation</li>
+                        <li>Negative performance reviews that are unwarranted</li>
+                    </ul>
+                    <p>Whistleblower resources:</p>
+                    <ul>
+                        <li><a href="#">OSHA Whistleblower Protection Program</a></li>
+                        <li><a href="#">SEC Whistleblower Program</a></li>
+                        <li><a href="#">National Whistleblower Center</a></li>
+                    </ul>
+                </section>
+            </div>
+        </section>
+
+        <section id="faq" class="page">
+            <h2>Frequently Asked Questions</h2>
+            <div class="faq-item"><strong>Is my identity really anonymous?</strong>
+                <p>Your information is encrypted and stored without any identifiers.</p>
+            </div>
+            <div class="faq-item"><strong>What happens after I submit a report?</strong>
+                <p>The report is reviewed by an investigator and you can track the status with the case ID.</p>
+            </div>
+            <div class="faq-item"><strong>How do companies take action on reports?</strong>
+                <p>They follow internal procedures and may launch investigations based on severity.</p>
+            </div>
+            <!-- add additional questions as needed -->
+        </section>
+    </div>
+
+    <!-- Report Detail Modal -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+
+        // page switching (home, submit, guidance, faq)
+        function switchPage(page) {
+            document.querySelectorAll('section.page').forEach(sec => sec.classList.remove('active'));
+            document.getElementById(page).classList.add('active');
+            document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+            document.querySelector(`.nav-links a[data-page="${page}"]`).classList.add('active');
+        }
+
+        document.querySelectorAll('.nav-links a').forEach(link => {
+            link.addEventListener('click', e => {
+                e.preventDefault();
+                const p = e.target.dataset.page;
+                switchPage(p);
+            });
+        });
+
+        // FAQ accordion behavior
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.faq-item')) {
+                const item = e.target.closest('.faq-item');
+                item.classList.toggle('open');
+            }
+        });
+
+        // ============ SUBMIT REPORT ============
+        document.getElementById('reportForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const reportText = document.getElementById('reportText').value;
+            const messageDiv = document.getElementById('submitMessage');
+
+            try {
+                messageDiv.innerHTML = '<div class="spinner"></div>';
+
+                const response = await fetch(`${API_BASE}/submit_report`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ report_text: reportText })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    const caseId = data.case_id;
+                    document.getElementById('reportText').value = '';
+                    messageDiv.innerHTML = `
+                        <div class="message success-message">
+                            <strong>Report submitted successfully!</strong><br>
+                            Your report has been encrypted and sent.
+                        </div>
+                        <label style="font-weight: 600; display: block; margin-bottom: 8px;">Your Case ID (Save this to check status):</label>
+                        <div class="case-id-box">${caseId}</div>
+                        <button class="button copy-button" onclick="copyToClipboard('${caseId}')">Copy Case ID</button>
+                    `;
+                } else {
+                    messageDiv.innerHTML = `<div class="message error-message">Error: ${data.detail || 'Failed to submit'}</div>`;
+                }
+            } catch (error) {
+                messageDiv.innerHTML = `<div class="message error-message">Error: ${error.message}</div>`;
+            }
+        });
+
+        // ============ CHECK REPORT ============
+        document.getElementById('checkForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const caseId = document.getElementById('caseIdInput').value.trim();
+            const messageDiv = document.getElementById('checkMessage');
+
+            if (!caseId) {
+                messageDiv.innerHTML = `<div class="message error-message">Please enter a Case ID.</div>`;
+                return;
+            }
+
+            try {
+                messageDiv.innerHTML = '<div class="spinner"></div>';
+                const response = await fetch(`${API_BASE}/view_report?case_id=${encodeURIComponent(caseId)}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    messageDiv.innerHTML = `
+                        <div class="message success-message">
+                            <strong>Report Found</strong><br>
+                            Status of your report is shown below.
+                        </div>
+                        <div class="report-detail">
+                            <strong>Case ID:</strong> ${data.case_id}<br><br>
+                            <strong>Status:</strong> <span class="status-badge status-${data.status.toLowerCase()}">${data.status.toUpperCase()}</span><br><br>
+                            <strong>Submitted:</strong> ${data.created_at}
+                        </div>
+                    `;
+                } else {
+                    messageDiv.innerHTML = `<div class="message error-message">${data.detail || 'Report not found or invalid Case ID'}</div>`;
+                }
+            } catch (error) {
+                messageDiv.innerHTML = `<div class="message error-message">An error occurred: ${error.message}</div>`;
+            }
+        });
+
+        // ============ Toasts ============
+        function showToast(message, type='info') {
+            let container = document.getElementById('toast');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast';
+                document.body.appendChild(container);
+            }
+            const item = document.createElement('div');
+            item.className = 'toast-item';
+            item.textContent = message;
+            container.appendChild(item);
+            setTimeout(() => item.style.opacity = '0', 3800);
+            setTimeout(() => item.remove(), 4200);
+        }
+
+        function closeModal() {
+            document.getElementById('reportModal').classList.remove('active');
+        }
+
+        function logout() {
+            // reset to home and clear theme if desired
+            localStorage.removeItem('theme');
+            switchPage('home');
+        }
+
+        document.querySelector('.close-button')?.addEventListener('click', closeModal);
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('reportModal');
+            if (e.target === modal) closeModal();
+        });
+
+        // ============ DARK MODE ============
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+            updateThemeToggleIcon();
+        }
+
+        function updateThemeToggleIcon() {
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            document.querySelector('.theme-toggle').textContent = isDarkMode ? '☀️' : '🌙';
+        }
+
+        // Initialize theme from localStorage
+        window.addEventListener('load', () => {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+            }
+            updateThemeToggleIcon();
+            // ensure home page active on load
+            switchPage('home');
+        });
+    </script>
+</body>
+</html>
