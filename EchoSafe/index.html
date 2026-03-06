@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EchoSafe Access</title>
+    <style>
+        :root {
+            --bg-1: #0f1f3d;
+            --bg-2: #17305b;
+            --panel: #f5f7fb;
+            --ink: #0f172a;
+            --muted: #475569;
+            --primary: #1d4ed8;
+            --primary-dark: #1e40af;
+            --card: #ffffff;
+            --border: #dbe3f4;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 20px;
+            background: radial-gradient(circle at 15% 20%, #2f5fb0 0%, var(--bg-1) 40%, #0b162f 100%);
+            color: var(--ink);
+        }
+
+        .shell {
+            width: min(920px, 100%);
+            background: var(--panel);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 18px;
+            box-shadow: 0 24px 60px rgba(2, 6, 23, 0.35);
+            overflow: hidden;
+        }
+
+        .head {
+            background: linear-gradient(120deg, var(--bg-2), var(--bg-1));
+            color: #fff;
+            padding: 24px;
+        }
+
+        .head h1 {
+            font-size: 30px;
+            margin-bottom: 6px;
+        }
+
+        .head p {
+            opacity: 0.92;
+            font-size: 14px;
+        }
+
+        .body {
+            padding: 24px;
+            display: grid;
+            gap: 20px;
+        }
+
+        .api-box {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .api-box label {
+            display: block;
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .api-box input {
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px solid #c8d2ea;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 18px;
+        }
+
+        .card h2 {
+            font-size: 20px;
+            margin-bottom: 6px;
+        }
+
+        .card p {
+            font-size: 14px;
+            color: var(--muted);
+            margin-bottom: 14px;
+            min-height: 42px;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-weight: 600;
+            color: #fff;
+            background: var(--primary);
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .btn:hover { background: var(--primary-dark); }
+
+        .meta {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 8px;
+            text-align: center;
+        }
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .quick-btn {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 9px 10px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--ink);
+            cursor: pointer;
+        }
+        .quick-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        @media (max-width: 760px) {
+            .cards { grid-template-columns: 1fr; }
+            .quick-actions { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <section class="head">
+            <h1>EchoSafe Access</h1>
+            <p>Select where to continue: HR Investigation Portal or Anonymous Reporting Portal.</p>
+        </section>
+        <section class="body">
+            <div class="cards">
+                <article class="card">
+                    <h2>HR Access</h2>
+                    <p>Login as investigator to review, decrypt, and manage workplace cases.</p>
+                    <button class="btn" onclick="goToPortal('hr_portal/index.html')">Open HR Login</button>
+                </article>
+                <article class="card">
+                    <h2>Anonymous Reporting</h2>
+                    <p>Submit a report or check case status without creating an account.</p>
+                    <button class="btn" onclick="goToPortal('frontend/index.html')">Open Reporting</button>
+                </article>
+            </div>
+            <div class="quick-actions">
+                <button class="quick-btn" onclick="openApiRoot()">Open API Root</button>
+                <button class="quick-btn" onclick="openApiDocs()">Open API Docs</button>
+                <button class="quick-btn" onclick="copyApiBase()">Copy API URL</button>
+            </div>
+            <p class="meta">Backend is fixed to http://localhost:8000/api.</p>
+        </section>
+    </main>
+
+    <script>
+        const API_BASE = "http://localhost:8000/api";
+
+        function goToPortal(path) {
+            localStorage.setItem("echosafeApiBase", API_BASE);
+            const target = `${path}?api=${encodeURIComponent(API_BASE)}`;
+            window.location.href = target;
+        }
+
+        function openApiRoot() {
+            const rootUrl = API_BASE.replace(/\/api$/, "");
+            window.open(rootUrl, "_blank");
+        }
+
+        function openApiDocs() {
+            const docsUrl = API_BASE.replace(/\/api$/, "") + "/docs";
+            window.open(docsUrl, "_blank");
+        }
+
+        async function copyApiBase() {
+            try {
+                await navigator.clipboard.writeText(API_BASE);
+                alert("API URL copied.");
+            } catch (error) {
+                alert("Could not copy API URL.");
+            }
+        }
+
+        localStorage.setItem("echosafeApiBase", API_BASE);
+    </script>
+</body>
+</html>

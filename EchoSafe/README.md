@@ -89,7 +89,8 @@ python app.py
 The API will be available at `http://localhost:8000`
 
 #### 4. Open Frontend
-Open `frontend/index.html` in a browser or serve it with a simple HTTP server:
+Open `index.html` (project root) for the new access page that routes to HR or Reporting portals.
+You can also open `frontend/index.html` directly, or serve it with a simple HTTP server:
 ```bash
 cd frontend
 python -m http.server 8080

@@ -9,9 +9,11 @@ import socketserver
 import os
 import json
 from urllib.parse import urlparse, parse_qs
+from pathlib import Path
 
 PORT = 3000
 HR_PORTAL_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = Path(HR_PORTAL_DIR).parent
 
 class HRPortalHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -46,6 +48,8 @@ if __name__ == '__main__':
         print("=" * 60)
         print(f"✓ Running at http://localhost:{PORT}")
         print(f"✓ Serving from: {HR_PORTAL_DIR}")
+        print(f"✓ Access Page (local file): {(ROOT_DIR / 'index.html').as_uri()}")
+        print(f"✓ Reporting Page (local file): {(ROOT_DIR / 'frontend' / 'index.html').as_uri()}")
         print(f"✓ Backend API: http://localhost:8000")
         print("=" * 60)
         print("\nPress CTRL+C to stop\n")

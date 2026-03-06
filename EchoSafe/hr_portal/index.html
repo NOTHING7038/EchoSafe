@@ -421,7 +421,6 @@
             background: rgba(59, 130, 246, 0.2);
             color: #60a5fa;
         }
-        }
 
         .status-badge {
             display: inline-block;
@@ -688,9 +687,9 @@
         <!-- Sidebar -->
         <div class="sidebar">
             <div class="logo">🔐 HR Portal</div>
-            <div class="nav-item active" onclick="switchView('dashboard')">📊 Dashboard</div>
-            <div class="nav-item" onclick="switchView('cases')">📋 Cases</div>
-            <div class="nav-item" onclick="switchView('analytics')">📈 Analytics</div>
+            <div class="nav-item active" onclick="switchView('dashboard', this)">📊 Dashboard</div>
+            <div class="nav-item" onclick="switchView('cases', this)">📋 Cases</div>
+            <div class="nav-item" onclick="switchView('analytics', this)">📈 Analytics</div>
             <div class="user-info">
                 <div id="userDisplay">Loading...</div>
                 <!-- make logout button more compact -->
@@ -705,6 +704,8 @@
                 <div class="topbar-title" id="pageTitle">Dashboard</div>
                 <div class="topbar-actions">
                     <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+                    <button class="btn btn-secondary" onclick="goToAccessHome()">Access Home</button>
+                    <button class="btn btn-secondary" onclick="goToReportingPortal()">Reporting</button>
                     <button class="btn btn-primary" onclick="refreshData()">🔄 Refresh</button>
                     <button class="btn btn-secondary" onclick="changePassword()">🔐 Change Password</button>
                 </div>
@@ -829,11 +830,34 @@
     </div>
 
     <script>
-        const API_BASE = 'http://localhost:8000/api';
+        function resolveApiBase() {
+            const fromQuery = new URLSearchParams(window.location.search).get('api');
+            const fromStorage = localStorage.getItem('echosafeApiBase') || localStorage.getItem('hrApiBase');
+            if (fromQuery) return fromQuery.replace(/\/$/, '');
+            if (fromStorage) return fromStorage.replace(/\/$/, '');
+            const host = window.location.hostname || 'localhost';
+            const protocol = window.location.protocol === 'file:' ? 'http:' : window.location.protocol;
+            return `${protocol}//${host}:8000/api`;
+        }
+
+        const API_BASE = resolveApiBase();
+        localStorage.setItem('echosafeApiBase', API_BASE);
         let token = localStorage.getItem('hrToken');
         let currentPage = 1;
         let currentCaseId = null;
         let allCases = [];
+
+        function portalUrl(path) {
+            return `${path}?api=${encodeURIComponent(API_BASE)}`;
+        }
+
+        function goToAccessHome() {
+            window.location.href = portalUrl('../index.html');
+        }
+
+        function goToReportingPortal() {
+            window.location.href = portalUrl('../frontend/index.html');
+        }
 
         // Check authentication on load
         window.addEventListener('load', () => {
@@ -867,6 +891,8 @@
         }
 
         function showLoginForm() {
+            document.querySelector('.sidebar').style.display = 'none';
+            document.querySelector('.topbar').style.display = 'none';
             const content = document.querySelector('.content');
             const isDarkMode = document.body.classList.contains('dark-mode');
             const bgColor = isDarkMode ? '#374151' : 'white';
@@ -890,6 +916,10 @@
                         </div>
                         
                         <button class="btn btn-primary" onclick="hrLogin()" style="width: 100%; padding: 12px;">Login</button>
+                        <div style="display:flex; gap:10px; margin-top: 10px;">
+                            <button class="btn btn-secondary" onclick="goToAccessHome()" style="flex:1; padding: 10px;">Access Home</button>
+                            <button class="btn btn-secondary" onclick="goToReportingPortal()" style="flex:1; padding: 10px;">Reporting</button>
+                        </div>
                         
                         <div id="loginMessage" style="margin-top: 15px; text-align: center; color: var(--danger);"></div>
                     </div>
@@ -898,7 +928,7 @@
         }
 
         async function hrLogin() {
-            const username = document.getElementById('loginUsername').value;
+            const username = document.getElementById('loginUsername').value.trim();
             const password = document.getElementById('loginPassword').value;
             const message = document.getElementById('loginMessage');
 
@@ -926,7 +956,11 @@
                     message.textContent = data.detail || 'Login failed';
                 }
             } catch (error) {
-                message.textContent = 'Error: ' + error.message;
+                if (error && error.message && error.message.includes('Failed to fetch')) {
+                    message.textContent = `Cannot reach API at ${API_BASE}. Start backend on port 8000 and check CORS.`;
+                } else {
+                    message.textContent = 'Error: ' + error.message;
+                }
             }
         }
 
@@ -1185,11 +1219,13 @@
             document.getElementById('caseModal').classList.remove('active');
         }
 
-        function switchView(view) {
+        function switchView(view, clickedNav) {
             document.querySelectorAll('[id$="View"]').forEach(el => el.style.display = 'none');
             document.getElementById(view + 'View').style.display = 'block';
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            event.target.classList.add('active');
+            if (clickedNav) {
+                clickedNav.classList.add('active');
+            }
 
             const titles = {
                 'dashboard': 'Dashboard',
