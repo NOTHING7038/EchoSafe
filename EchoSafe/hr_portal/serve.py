@@ -11,9 +11,10 @@ import json
 from urllib.parse import urlparse, parse_qs
 from pathlib import Path
 
-PORT = 3000
+DEFAULT_PORT = 3000
 HR_PORTAL_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR = Path(HR_PORTAL_DIR).parent
+ROOT_DIR = Path(HR_PORTAL_DIR).parent  # This is the EchoSafe project root
+FRONTEND_DIR = ROOT_DIR / "frontend"
 
 class HRPortalHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -34,26 +35,35 @@ class HRPortalHandler(http.server.SimpleHTTPRequestHandler):
         print(f"[HR Portal] {format % args}")
 
     def do_GET(self):
-        """Handle GET requests"""
-        # Route all requests to index.html for SPA routing
-        if self.path == '/' or not self.path.startswith('/'):
-            self.path = '/index.html'
-        
-        return super().do_GET()
+        """Handle GET requests, serving index.html for SPA routes."""
+        # If the path doesn't point to an existing file, serve index.html.
+        # This allows the frontend's router to handle the path.
+        path = self.translate_path(self.path)
+        if not os.path.exists(path):
+            self.path = "/index.html"
+        return http.server.SimpleHTTPRequestHandler.do_GET(self)
 
 if __name__ == '__main__':
-    with socketserver.TCPServer(("", PORT), HRPortalHandler) as httpd:
-        print("=" * 60)
-        print("🚀 EchoSafe HR Portal Server")
-        print("=" * 60)
-        print(f"✓ Running at http://localhost:{PORT}")
-        print(f"✓ Serving from: {HR_PORTAL_DIR}")
-        print(f"✓ Access Page (local file): {(ROOT_DIR / 'index.html').as_uri()}")
-        print(f"✓ Reporting Page (local file): {(ROOT_DIR / 'frontend' / 'index.html').as_uri()}")
-        print(f"✓ Backend API: http://localhost:8000")
-        print("=" * 60)
-        print("\nPress CTRL+C to stop\n")
+    socketserver.TCPServer.allow_reuse_address = True
+    max_tries = 10
+    
+    for current_port in range(DEFAULT_PORT, DEFAULT_PORT + max_tries):
         try:
-            httpd.serve_forever()
-        except KeyboardInterrupt:
-            print("\n\nServer stopped.")
+            with socketserver.TCPServer(("", current_port), HRPortalHandler) as httpd:
+                print("=" * 60)
+                print("🚀 EchoSafe HR Portal Server")
+                print("=" * 60)
+                print(f"✓ Portal running at http://localhost:{current_port}")
+                print(f"✓ Serving application from: {HR_PORTAL_DIR}")
+                print(f"✓ Backend API: http://localhost:8000")
+                print("=" * 60)
+                print("\nPress CTRL+C to stop\n")
+                try:
+                    httpd.serve_forever()
+                except KeyboardInterrupt:
+                    print("\n\nServer stopped.")
+                break
+        except OSError as e:
+            print(f"⚠️ Port {current_port} is busy, trying next port...")
+    else:
+        print(f"❌ Error: Could not find an open port between {DEFAULT_PORT} and {DEFAULT_PORT + max_tries - 1}")

@@ -825,16 +825,15 @@
     <script>
         function resolveApiBase() {
             const fromQuery = new URLSearchParams(window.location.search).get('api');
-            const fromStorage = localStorage.getItem('echosafeApiBase');
             if (fromQuery) return fromQuery.replace(/\/$/, '');
-            if (fromStorage) return fromStorage.replace(/\/$/, '');
-            const host = window.location.hostname || 'localhost';
+            // Always use 127.0.0.1 to avoid IPv6 localhost resolution issues
+            const host = window.location.hostname === 'localhost' ? '127.0.0.1' : (window.location.hostname || '127.0.0.1');
             const protocol = window.location.protocol === 'file:' ? 'http:' : window.location.protocol;
             return `${protocol}//${host}:8000/api`;
         }
 
         const API_BASE = resolveApiBase();
-        localStorage.setItem('echosafeApiBase', API_BASE);
+        localStorage.removeItem('echosafeApiBase'); // Clear cached invalid URLs
 
         function portalUrl(path) {
             return `${path}?api=${encodeURIComponent(API_BASE)}`;
