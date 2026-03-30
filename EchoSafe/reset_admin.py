@@ -7,7 +7,6 @@ Usage: python reset_admin.py
 import sqlite3
 import bcrypt
 import os
-from datetime import datetime, UTC
 import sys
 
 # Database is in the backend directory
@@ -30,7 +29,7 @@ def reset_admin():
         cursor = conn.cursor()
         
         # Hash the password
-        password_hash = bcrypt.hashpw(ADMIN_PASSWORD.encode(), bcrypt.gensalt()).decode("utf-8")
+        password_hash = bcrypt.hashpw(ADMIN_PASSWORD.encode(), bcrypt.gensalt())
         
         # Check if admin exists
         cursor.execute("SELECT id FROM hr_users WHERE username = ?", (ADMIN_USERNAME,))
@@ -39,18 +38,17 @@ def reset_admin():
         if existing:
             # Update existing admin
             cursor.execute("""
-            UPDATE hr_users
-            SET password_hash = ?
+            UPDATE hr_users 
+            SET password_hash = ?, failed_attempts = 0, is_locked = 0, locked_until = NULL
             WHERE username = ?
             """, (password_hash, ADMIN_USERNAME))
             print(f"✓ Admin password updated successfully")
         else:
             # Create new admin
-            created_at = datetime.now(UTC).isoformat()
             cursor.execute("""
-            INSERT INTO hr_users (username, password_hash, created_at)
-            VALUES (?, ?, ?)
-            """, (ADMIN_USERNAME, password_hash, created_at))
+            INSERT INTO hr_users (username, password_hash, failed_attempts, is_locked)
+            VALUES (?, ?, 0, 0)
+            """, (ADMIN_USERNAME, password_hash))
             print(f"✓ Admin user created successfully")
         
         conn.commit()

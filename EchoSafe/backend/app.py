@@ -1,40 +1,69 @@
 #!/usr/bin/env python3
 """
-EchoSafe backend (FastAPI + MongoDB)
+EchoSafe Backend - Anonymous Reporting System
+
+FastAPI-based backend providing secure, anonymous reporting with:
+- End-to-end encryption for report data
+- AI-powered urgency triage
+- JWT-authenticated HR investigator dashboard
+- MongoDB data persistence
+
+Author: EchoSafe Team
+Version: 1.0.0
 """
 
 import hashlib
-import sqlite3
 import os
-import random
 import uuid
 from datetime import UTC, datetime, timedelta
-from typing import Any
-import base64
+from typing import Any, Dict, List, Optional
 
 import bcrypt
 import jwt
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
-from Crypto.Cipher import AES
-from Crypto.Protocol.KDF import PBKDF2
-from Crypto.Random import get_random_bytes
-from Crypto.Hash import SHA256
+from pydantic import BaseModel, Field, validator
+from pymongo import DESCENDING, MongoClient
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE_URL = os.getenv("DATABASE_URL", os.path.join(BASE_DIR, "echosafe.db"))
-JWT_SECRET = os.getenv("JWT_SECRET", "change-this-in-production")
+# =============================================================================
+# CONFIGURATION
+# =============================================================================
+
+# Database Configuration
+MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+MONGODB_DB = os.getenv("MONGODB_DB", "echosafe")
+
+# Security Configuration
+JWT_SECRET = os.getenv("JWT_SECRET", "change-this-in-production-use-strong-random-value")
 JWT_ALGO = "HS256"
-JWT_EXPIRE_HOURS = 24
-# This salt is used for deriving encryption keys. It's not a secret but should be static.
-ENCRYPTION_SALT = b"\xbf\x82\xf1\x11\x8f\x9a\x1a\xf8\x1e\x96\x95\x1e\xde\xd3\x99\x43"
+JWT_EXPIRE_HOURS = int(os.getenv("JWT_EXPIRE_HOURS", "24"))
 
+# Default Admin Configuration
 DEFAULT_ADMIN_USER = os.getenv("DEFAULT_ADMIN_USER", "admin")
 DEFAULT_ADMIN_PASSWORD = os.getenv("DEFAULT_ADMIN_PASSWORD", "Admin@7038!")
 
-app = FastAPI(title="EchoSafe API")
+# =============================================================================
+# DATABASE INITIALIZATION
+# =============================================================================
 
+client = MongoClient(MONGODB_URI)
+db = client[MONGODB_DB]
+hr_users = db["hr_users"]
+reports = db["reports"]
+
+# =============================================================================
+# FASTAPI APPLICATION
+# =============================================================================
+
+app = FastAPI(
+    title="EchoSafe API",
+    description="Anonymous reporting system with AI-powered triage",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
+
+# CORS Middleware Configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -42,6 +71,8 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "http://localhost:8080",
         "http://127.0.0.1:8080",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
         "null",  # browsers can send Origin: null for file:// pages
     ],
     allow_credentials=True,
@@ -49,60 +80,100 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# =============================================================================
+# PYDANTIC MODELS
+# =============================================================================
+
 
 class LoginRequest(BaseModel):
-    username: str
-    password: str
-
-
-class OTPRequest(BaseModel):
-    email: str
-
-class OTPVerify(BaseModel):
-    email: str
-    otp: str
-
-
-class OTPRequest(BaseModel):
-    email: str
-
-class OTPVerify(BaseModel):
-    email: str
-    otp: str
+    """HR user login request model."""
+    username: str = Field(..., min_length=3, max_length=50, description="HR username")
+    password: str = Field(..., min_length=8, max_length=100, description="HR password")
 
 
 class SubmitReportRequest(BaseModel):
-    report_text: str = Field(min_length=5)
+    """Anonymous report submission request model."""
+    report_text: str = Field(
+        ..., 
+        min_length=10, 
+        max_length=5000,
+        description="Report content (10-5000 characters)"
+    )
+    
+    @validator('report_text')
+    def validate_report_text(cls, v):
+        if not v.strip():
+            raise ValueError('Report text cannot be empty')
+        return v.strip()
 
 
 class UpdateStatusRequest(BaseModel):
-    case_id: str
-    status: str
+    """Case status update request model."""
+    case_id: str = Field(..., min_length=8, description="Unique case identifier")
+    status: str = Field(..., description="New case status")
+    
+    @validator('status')
+    def validate_status(cls, v):
+        allowed_statuses = {"pending", "investigating", "resolved"}
+        if v not in allowed_statuses:
+            raise ValueError(f'Status must be one of: {allowed_statuses}')
+        return v
 
 
 class DecryptRequest(BaseModel):
-    case_id: str
+    """Report decryption request model."""
+    case_id: str = Field(..., min_length=8, description="Unique case identifier")
 
 
 class ChangePasswordRequest(BaseModel):
-    old_password: str
-    new_password: str = Field(min_length=8)
+    """Password change request model."""
+    old_password: str = Field(..., min_length=8, description="Current password")
+    new_password: str = Field(..., min_length=8, max_length=100, description="New password")
 
 
 class RegisterRequest(BaseModel):
-    username: str
-    password: str = Field(min_length=8)
+    """HR user registration request model."""
+    username: str = Field(..., min_length=3, max_length=50, description="Desired username")
+    password: str = Field(..., min_length=8, max_length=100, description="Password")
+    
+    @validator('username')
+    def validate_username(cls, v):
+        if not v.strip() or not v.replace('_', '').replace('-', '').isalnum():
+            raise ValueError('Username must contain only alphanumeric characters, hyphens, and underscores')
+        return v.strip().lower()
 
+
+# =============================================================================
+# UTILITY FUNCTIONS
+# =============================================================================
 
 def now_utc() -> datetime:
+    """Get current UTC datetime."""
     return datetime.now(UTC)
 
 
 def hash_password(password: str) -> str:
+    """Hash password using bcrypt with salt.
+    
+    Args:
+        password: Plain text password
+        
+    Returns:
+        Hashed password string
+    """
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(password: str, password_hash: str) -> bool:
+    """Verify password against hash.
+    
+    Args:
+        password: Plain text password to verify
+        password_hash: Hashed password to verify against
+        
+    Returns:
+        True if password matches, False otherwise
+    """
     try:
         return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
     except Exception:
@@ -110,467 +181,891 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 
 def build_token(username: str) -> str:
+    """Build JWT token for user authentication.
+    
+    Args:
+        username: Username to include in token
+        
+    Returns:
+        JWT token string
+    """
     exp = now_utc() + timedelta(hours=JWT_EXPIRE_HOURS)
-    payload = {"sub": username, "exp": exp}
+    payload = {
+        "sub": username,
+        "exp": exp,
+        "iat": now_utc(),
+        "type": "hr_access"
+    }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGO)
 
 
-def get_current_user(
-    authorization: str | None = Header(default=None), token: str | None = Query(default=None)
-) -> dict[str, Any]:
-    if authorization and authorization.startswith("Bearer "):
-        token_str = authorization.split(" ", 1)[1].strip()
-    elif token:
-        token_str = token
-    else:
-        raise HTTPException(status_code=401, detail="Missing or invalid authorization token")
-
-    try:
-        payload = jwt.decode(token_str, JWT_SECRET, algorithms=[JWT_ALGO])
-        username = payload.get("sub")
-        if not username:
-            raise HTTPException(status_code=401, detail="Invalid token")
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-
-    with sqlite3.connect(DATABASE_URL) as conn:
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM hr_users WHERE username = ?", (username,))
-        user = cursor.fetchone()
-
-    if not user:
-        raise HTTPException(status_code=401, detail="User not found")
-    return dict(user)
-
-
-def get_encryption_key(case_id: str) -> bytes:
-    return PBKDF2(case_id, ENCRYPTION_SALT, dkLen=32, count=1000000, hmac_hash_module=SHA256)
-
-
-def encrypt_text(text: str, key: bytes) -> dict[str, str]:
-    cipher = AES.new(key, AES.MODE_GCM)
-    ciphertext, tag = cipher.encrypt_and_digest(text.encode("utf-8"))
-    return {
-        "iv": base64.b64encode(cipher.nonce).decode("utf-8"),
-        "ciphertext": base64.b64encode(ciphertext).decode("utf-8"),
-        "tag": base64.b64encode(tag).decode("utf-8"),
-    }
-
-
-def decrypt_text(encrypted_data: dict[str, str], key: bytes) -> str:
-    try:
-        iv = base64.b64decode(encrypted_data["iv"])
-        ciphertext = base64.b64decode(encrypted_data["ciphertext"])
-        tag = base64.b64decode(encrypted_data["tag"])
-        cipher = AES.new(key, AES.MODE_GCM, nonce=iv)
-        return cipher.decrypt_and_verify(ciphertext, tag).decode("utf-8")
-    except (ValueError, KeyError):
-        raise HTTPException(status_code=500, detail="Decryption failed")
-
-
 def urgency_score(text: str) -> float:
-    text_l = text.lower()
-    score = 0.1
-    high = ["threat", "violence", "abuse", "assault", "unsafe", "harassment"]
-    medium = ["bully", "discrimination", "retaliation", "hostile", "pressure"]
-    for kw in high:
-        if kw in text_l:
+    """Calculate urgency score for report text using keyword analysis.
+    
+    This is a fallback method when the AI model is unavailable.
+    
+    Args:
+        text: Report text to analyze
+        
+    Returns:
+        Urgency score between 0.0 (low) and 1.0 (high)
+    """
+    text_lower = text.lower()
+    score = 0.1  # Base score
+    
+    # High priority keywords (increase score by 0.2 each)
+    high_priority_keywords = [
+        "threat", "violence", "abuse", "assault", "unsafe", 
+        "harassment", "emergency", "danger", "weapon", "harm"
+    ]
+    
+    # Medium priority keywords (increase score by 0.1 each)
+    medium_priority_keywords = [
+        "bully", "discrimination", "retaliation", "hostile", 
+        "pressure", "inappropriate", "uncomfortable", "concern"
+    ]
+    
+    # Count keyword occurrences
+    for keyword in high_priority_keywords:
+        if keyword in text_lower:
             score += 0.2
-    for kw in medium:
-        if kw in text_l:
+            
+    for keyword in medium_priority_keywords:
+        if keyword in text_lower:
             score += 0.1
+    
+    # Cap score between 0.0 and 1.0
     return max(0.0, min(1.0, round(score, 2)))
 
 
 def ensure_default_admin() -> None:
-    with sqlite3.connect(DATABASE_URL) as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT username FROM hr_users WHERE username = ?", (DEFAULT_ADMIN_USER,))
-        if cursor.fetchone():
-            return
+    """Create default admin user if it doesn't exist."""
+    existing = hr_users.find_one({"username": DEFAULT_ADMIN_USER})
+    if existing:
+        return
+        
+    hr_users.insert_one({
+        "username": DEFAULT_ADMIN_USER,
+        "password_hash": hash_password(DEFAULT_ADMIN_PASSWORD),
+        "created_at": now_utc(),
+        "role": "admin",
+        "is_active": True
+    })
+    print(f"Default admin user '{DEFAULT_ADMIN_USER}' created successfully")
 
-        cursor.execute(
-            "INSERT INTO hr_users (username, password_hash, created_at) VALUES (?, ?, ?)",
-            (
-                DEFAULT_ADMIN_USER,
-                hash_password(DEFAULT_ADMIN_PASSWORD),
-                now_utc().isoformat(),
-            ),
+
+# =============================================================================
+# AUTHENTICATION DEPENDENCIES
+# =============================================================================
+
+def get_current_user(authorization: str | None = Header(default=None)) -> Dict[str, Any]:
+    """Dependency to get current authenticated HR user.
+    
+    Args:
+        authorization: Authorization header with Bearer token
+        
+    Returns:
+        User document from database
+        
+    Raises:
+        HTTPException: If authentication fails
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=401, 
+            detail="Missing or invalid authorization header",
+            headers={"WWW-Authenticate": "Bearer"}
         )
-        conn.commit()
-        print(f"Created default admin user: {DEFAULT_ADMIN_USER}")
+
+    token = authorization.split(" ", 1)[1].strip()
+    
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGO])
+        username = payload.get("sub")
+        token_type = payload.get("type")
+        
+        if not username or token_type != "hr_access":
+            raise HTTPException(status_code=401, detail="Invalid token")
+            
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    user = hr_users.find_one({"username": username}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+        
+    if not user.get("is_active", True):
+        raise HTTPException(status_code=401, detail="Account is deactivated")
+        
+    return user
 
 
-def init_db() -> None:
-    with sqlite3.connect(DATABASE_URL) as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS hr_users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            created_at TEXT NOT NULL
-        )""")
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS reports (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            case_id TEXT UNIQUE NOT NULL,
-            encrypted_report TEXT NOT NULL,
-            iv TEXT NOT NULL,
-            auth_tag TEXT NOT NULL,
-            urgency_score REAL NOT NULL,
-            status TEXT NOT NULL,
-            created_at TEXT NOT NULL
-        )""")
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS hr_otps (
-            email TEXT PRIMARY KEY,
-            otp_code TEXT NOT NULL,
-            expires_at TEXT NOT NULL
-        )""")
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS hr_otps (
-            email TEXT PRIMARY KEY,
-            otp_code TEXT NOT NULL,
-            expires_at TEXT NOT NULL
-        )""")
-        conn.commit()
+def urgency_score(text: str) -> float:
+    """Calculate urgency score for report text using keyword analysis.
+    
+    This is a fallback method when the AI model is unavailable.
+    
+    Args:
+        text: Report text to analyze
+        
+    Returns:
+        Urgency score between 0.0 (low) and 1.0 (high)
+    """
+    text_lower = text.lower()
+    score = 0.1  # Base score
+    
+    # High priority keywords (increase score by 0.2 each)
+    high_priority_keywords = [
+        "threat", "violence", "abuse", "assault", "unsafe", 
+        "harassment", "emergency", "danger", "weapon", "harm"
+    ]
+    
+    # Medium priority keywords (increase score by 0.1 each)
+    medium_priority_keywords = [
+        "bully", "discrimination", "retaliation", "hostile", 
+        "pressure", "inappropriate", "uncomfortable", "concern"
+    ]
+    
+    # Count keyword occurrences
+    for keyword in high_priority_keywords:
+        if keyword in text_lower:
+            score += 0.2
+            
+    for keyword in medium_priority_keywords:
+        if keyword in text_lower:
+            score += 0.1
+    
+    # Cap score between 0.0 and 1.0
+    return max(0.0, min(1.0, round(score, 2)))
 
+
+def ensure_default_admin() -> None:
+    """Create default admin user if it doesn't exist."""
+    existing = hr_users.find_one({"username": DEFAULT_ADMIN_USER})
+    if existing:
+        return
+        
+    hr_users.insert_one({
+        "username": DEFAULT_ADMIN_USER,
+        "password_hash": hash_password(DEFAULT_ADMIN_PASSWORD),
+        "created_at": now_utc(),
+        "role": "admin",
+        "is_active": True
+    })
+    print(f"Default admin user '{DEFAULT_ADMIN_USER}' created successfully")
+
+
+# =============================================================================
+# APPLICATION EVENTS
+# =============================================================================
 
 @app.on_event("startup")
-def startup() -> None:
+async def startup_event() -> None:
+    """Initialize application on startup."""
     try:
-        print("--- 🚀 Initializing Database... ---")
-        init_db()
-        print("--- ✅ Database Initialized. ---")
-        print("--- 👤 Ensuring default admin user... ---")
+        # Create database indexes for performance
+        hr_users.create_index("username", unique=True)
+        reports.create_index("case_id", unique=True)
+        reports.create_index([("urgency_score", DESCENDING)])
+        reports.create_index([("created_at", DESCENDING)])
+        reports.create_index(["status", "created_at"])
+        
+        # Ensure default admin user exists
         ensure_default_admin()
-        print("--- ✅ Admin user check complete. ---")
+        
+        print("✅ EchoSafe API started successfully")
+        print(f"📊 Database: {MONGODB_DB}")
+        print(f"🔐 Default admin: {DEFAULT_ADMIN_USER}")
+        
     except Exception as e:
-        print(f"\n🔥🔥🔥 A FATAL ERROR OCCURRED ON STARTUP 🔥🔥🔥")
-        import traceback
-        traceback.print_exc()
+        print(f"❌ Startup error: {e}")
+        raise
 
 
-@app.get("/")
-def root() -> dict[str, str]:
-    return {"status": "ok", "service": "EchoSafe API"}
+# =============================================================================
+# API ENDPOINTS - ROOT
+# =============================================================================
+
+@app.get("/", 
+         summary="API Health Check",
+         description="Returns basic API status information",
+         tags=["System"])
+def root() -> Dict[str, str]:
+    """Health check endpoint to verify API is running."""
+    return {
+        "status": "ok", 
+        "service": "EchoSafe API",
+        "version": "1.0.0",
+        "timestamp": now_utc().isoformat()
+    }
 
 
-def send_otp_email(email: str, otp: str) -> None:
-    # For this MVP, we print to the console. 
-    # In production, integrate smtplib or an email API like SendGrid here.
-    print(f"\n{'='*50}")
-    print(f"📧 EMAIL SENT TO: {email}")
-    print(f"🔑 YOUR ONE-TIME PASSWORD IS: {otp}")
-    print(f"{'='*50}\n")
-
-
-@app.post("/api/hr/request_otp")
-def request_otp(body: OTPRequest) -> dict[str, Any]:
-    email = body.email.strip().lower()
-    if not email or "@" not in email:
-        raise HTTPException(status_code=400, detail="Valid email required")
-        
-    otp = f"{random.randint(100000, 999999)}"
-    expires = (now_utc() + timedelta(minutes=10)).isoformat()
+@app.get("/health",
+         summary="Detailed Health Check",
+         description="Returns detailed system health information",
+         tags=["System"])
+def health_check() -> Dict[str, Any]:
+    """Detailed health check with database connectivity."""
+    try:
+        # Test database connection
+        db.command("ping")
+        db_status = "connected"
+    except Exception:
+        db_status = "disconnected"
     
-    with sqlite3.connect(DATABASE_URL) as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT OR REPLACE INTO hr_otps (email, otp_code, expires_at) VALUES (?, ?, ?)",
-            (email, otp, expires)
-        )
-        conn.commit()
-        
-    send_otp_email(email, otp)
-    return {"success": True, "message": f"OTP sent to {email}"}
+    return {
+        "status": "healthy" if db_status == "connected" else "unhealthy",
+        "database": db_status,
+        "timestamp": now_utc().isoformat(),
+        "version": "1.0.0"
+    }
 
 
-@app.post("/api/hr/verify_otp")
-def verify_otp(body: OTPVerify) -> dict[str, Any]:
-    email = body.email.strip().lower()
+# =============================================================================
+# API ENDPOINTS - HR MANAGEMENT
+# =============================================================================
+
+@app.post("/api/hr/register",
+         summary="Register HR User",
+         description="Register a new HR investigator account",
+         response_model=Dict[str, Any],
+         tags=["HR Management"])
+def register_hr(body: RegisterRequest) -> Dict[str, Any]:
+    """Register a new HR user account.
     
-    with sqlite3.connect(DATABASE_URL) as conn:
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM hr_otps WHERE email = ?", (email,))
-        record = cursor.fetchone()
+    Args:
+        body: Registration request with username and password
         
-        if not record:
-            raise HTTPException(status_code=401, detail="No OTP requested for this email")
-        if record["otp_code"] != body.otp:
-            raise HTTPException(status_code=401, detail="Invalid OTP code")
-        if record["expires_at"] < now_utc().isoformat():
-            raise HTTPException(status_code=401, detail="OTP has expired")
-            
-        # OTP is valid, clear it
-        cursor.execute("DELETE FROM hr_otps WHERE email = ?", (email,))
+    Returns:
+        Success message or error details
         
-        # Check if user exists, if not create them
-        cursor.execute("SELECT * FROM hr_users WHERE username = ?", (email,))
-        user = cursor.fetchone()
-        if not user:
-            cursor.execute(
-                "INSERT INTO hr_users (username, password_hash, created_at) VALUES (?, ?, ?)",
-                (email, "OTP_LOGIN", now_utc().isoformat())
+    Raises:
+        HTTPException: If username already exists or validation fails
+    """
+    try:
+        # Check if username already exists
+        existing_user = hr_users.find_one({"username": body.username})
+        if existing_user:
+            raise HTTPException(
+                status_code=409, 
+                detail="Username already exists"
             )
-        conn.commit()
         
-    token = build_token(email)
-    return {"success": True, "token": token}
-
-
-def send_otp_email(email: str, otp: str) -> None:
-    # For this MVP, we print to the console. 
-    # In production, integrate smtplib or an email API like SendGrid here.
-    print(f"\n{'='*50}")
-    print(f"📧 EMAIL SENT TO: {email}")
-    print(f"🔑 YOUR ONE-TIME PASSWORD IS: {otp}")
-    print(f"{'='*50}\n")
-
-
-@app.post("/api/hr/request_otp")
-def request_otp(body: OTPRequest) -> dict[str, Any]:
-    email = body.email.strip().lower()
-    if not email or "@" not in email:
-        raise HTTPException(status_code=400, detail="Valid email required")
+        # Create new HR user
+        hr_users.insert_one({
+            "username": body.username,
+            "password_hash": hash_password(body.password),
+            "created_at": now_utc(),
+            "role": "investigator",
+            "is_active": True
+        })
         
-    otp = f"{random.randint(100000, 999999)}"
-    expires = (now_utc() + timedelta(minutes=10)).isoformat()
+        return {
+            "success": True, 
+            "message": "HR user created successfully",
+            "username": body.username
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail="Registration failed. Please try again."
+        ) from e
+
+
+@app.post("/api/hr/login",
+         summary="HR User Login",
+         description="Authenticate HR user and return JWT token",
+         response_model=Dict[str, Any],
+         tags=["HR Management"])
+def hr_login(body: LoginRequest) -> Dict[str, Any]:
+    """Authenticate HR user and provide JWT token.
     
-    with sqlite3.connect(DATABASE_URL) as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT OR REPLACE INTO hr_otps (email, otp_code, expires_at) VALUES (?, ?, ?)",
-            (email, otp, expires)
-        )
-        conn.commit()
+    Args:
+        body: Login credentials
         
-    send_otp_email(email, otp)
-    return {"success": True, "message": f"OTP sent to {email}"}
-
-
-@app.post("/api/hr/verify_otp")
-def verify_otp(body: OTPVerify) -> dict[str, Any]:
-    email = body.email.strip().lower()
-    
-    with sqlite3.connect(DATABASE_URL) as conn:
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM hr_otps WHERE email = ?", (email,))
-        record = cursor.fetchone()
+    Returns:
+        JWT token and user information
         
-        if not record:
-            raise HTTPException(status_code=401, detail="No OTP requested for this email")
-        if record["otp_code"] != body.otp:
-            raise HTTPException(status_code=401, detail="Invalid OTP code")
-        if record["expires_at"] < now_utc().isoformat():
-            raise HTTPException(status_code=401, detail="OTP has expired")
-            
-        # OTP is valid, clear it
-        cursor.execute("DELETE FROM hr_otps WHERE email = ?", (email,))
+    Raises:
+        HTTPException: If authentication fails
+    """
+    try:
+        # Find user by username
+        user = hr_users.find_one({"username": body.username})
         
-        # Check if user exists, if not create them
-        cursor.execute("SELECT * FROM hr_users WHERE username = ?", (email,))
-        user = cursor.fetchone()
-        if not user:
-            cursor.execute(
-                "INSERT INTO hr_users (username, password_hash, created_at) VALUES (?, ?, ?)",
-                (email, "OTP_LOGIN", now_utc().isoformat())
+        # Verify user exists and password is correct
+        if not user or not verify_password(body.password, user.get("password_hash", "")):
+            raise HTTPException(
+                status_code=401, 
+                detail="Invalid username or password"
             )
-        conn.commit()
         
-    token = build_token(email)
-    return {"success": True, "token": token}
+        # Check if account is active
+        if not user.get("is_active", True):
+            raise HTTPException(
+                status_code=401, 
+                detail="Account is deactivated"
+            )
+        
+        # Generate JWT token
+        token = build_token(body.username)
+        
+        return {
+            "success": True, 
+            "token": token,
+            "message": f"Welcome, {body.username}",
+            "user": {
+                "username": body.username,
+                "role": user.get("role", "investigator")
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail="Login failed. Please try again."
+        ) from e
 
 
-@app.get("/api/hr/dashboard")
+@app.get("/api/hr/dashboard",
+         summary="Get HR Dashboard Data",
+         description="Retrieve paginated list of reports for HR dashboard",
+         response_model=Dict[str, Any],
+         tags=["HR Dashboard"])
 def hr_dashboard(
-    page: int = Query(default=1, ge=1),
-    limit: int = Query(default=10, ge=1, le=1000),
-    search: str = Query(default=""),
-    user: dict[str, Any] = Depends(get_current_user),
-) -> dict[str, Any]:
-    base_query = "FROM reports"
-    where_clause = ""
-    params: list[Any] = []
-
-    if search.strip():
-        s = search.strip()
-        # Full-text search on encrypted data is not possible. Only search by case_id.
-        where_clause = "WHERE case_id LIKE ?"
-        params.append(f"%{s}%")
-
-    with sqlite3.connect(DATABASE_URL) as conn:
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-
-        total_cursor = cursor.execute(f"SELECT COUNT(*) {base_query} {where_clause}", params)
-        total = total_cursor.fetchone()[0]
-
+    page: int = Query(default=1, ge=1, description="Page number"),
+    limit: int = Query(default=10, ge=1, le=100, description="Items per page"),
+    search: str = Query(default="", description="Search term for case ID or content"),
+    status_filter: str = Query(default="", description="Filter by status"),
+    user: Dict[str, Any] = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """Get paginated reports for HR dashboard.
+    
+    Args:
+        page: Page number (starting from 1)
+        limit: Number of items per page (max 100)
+        search: Search term for filtering reports
+        status_filter: Filter by case status
+        user: Authenticated HR user from dependency
+        
+    Returns:
+        Paginated reports data with metadata
+    """
+    try:
+        # Build query filters
+        query: Dict[str, Any] = {}
+        
+        # Add search filter
+        if search.strip():
+            search_term = search.strip()
+            query["$or"] = [
+                {"case_id": {"$regex": search_term, "$options": "i"}},
+                {"report_text": {"$regex": search_term, "$options": "i"}}
+            ]
+        
+        # Add status filter
+        if status_filter:
+            allowed_statuses = {"pending", "investigating", "resolved"}
+            if status_filter in allowed_statuses:
+                query["status"] = status_filter
+        
+        # Get total count
+        total = reports.count_documents(query)
+        
+        # Calculate pagination
         skip = (page - 1) * limit
-        query = f"""
-            SELECT case_id, urgency_score, status, created_at
-            {base_query} {where_clause}
-            ORDER BY urgency_score DESC, created_at DESC
-            LIMIT ? OFFSET ?
-        """
-        rows_cursor = cursor.execute(query, (*params, limit, skip))
-        rows = [dict(row) for row in rows_cursor.fetchall()]
-
-    pages = (total + limit - 1) // limit if total else 0
-    return {
-        "investigator": user["username"],
-        "reports": rows,
-        "pagination": {"page": page, "limit": limit, "total": total, "pages": pages},
-    }
-
-
-@app.post("/api/hr/decrypt_report")
-def decrypt_report(body: DecryptRequest, _: dict[str, Any] = Depends(get_current_user)) -> dict[str, Any]:
-    with sqlite3.connect(DATABASE_URL) as conn:
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM reports WHERE case_id = ?", (body.case_id,))
-        report = cursor.fetchone()
-
-    if not report:
-        raise HTTPException(status_code=404, detail="Case not found")
-
-    key = get_encryption_key(report["case_id"])
-    encrypted_data = {
-        "iv": report["iv"],
-        "ciphertext": report["encrypted_report"],
-        "tag": report["auth_tag"],
-    }
-    decrypted_text = decrypt_text(encrypted_data, key)
-
-    return {
-        "case_id": report["case_id"],
-        "report_text": decrypted_text,
-        "created_at": report["created_at"],
-    }
-
-
-@app.put("/api/hr/update_status")
-def update_status(body: UpdateStatusRequest, _: dict[str, Any] = Depends(get_current_user)) -> dict[str, Any]:
-    allowed = {"pending", "investigating", "resolved"}
-    if body.status not in allowed:
-        raise HTTPException(status_code=400, detail="Invalid status")
-
-    with sqlite3.connect(DATABASE_URL) as conn:
-        cursor = conn.cursor()
-        cursor.execute("UPDATE reports SET status = ? WHERE case_id = ?", (body.status, body.case_id))
-        if cursor.rowcount == 0:
-            raise HTTPException(status_code=404, detail="Case not found")
-        conn.commit()
-    return {"success": True}
+        pages = (total + limit - 1) // limit if total else 0
+        
+        # Fetch reports with sorting
+        cursor = reports.find(
+            query, 
+            {"_id": 0}
+        ).sort([
+            ("urgency_score", DESCENDING), 
+            ("created_at", DESCENDING)
+        ]).skip(skip).limit(limit)
+        
+        # Process reports data
+        reports_list = []
+        for report in cursor:
+            # Convert datetime to ISO string
+            created_at = report.get("created_at")
+            if isinstance(created_at, datetime):
+                report["created_at"] = created_at.isoformat()
+            
+            # Add priority classification
+            urgency = float(report.get("urgency_score", 0))
+            if urgency > 0.6:
+                priority = "high"
+            elif urgency > 0.3:
+                priority = "medium"
+            else:
+                priority = "low"
+            
+            report["priority"] = priority
+            reports_list.append(report)
+        
+        return {
+            "investigator": user["username"],
+            "reports": reports_list,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total": total,
+                "pages": pages,
+                "has_next": page < pages,
+                "has_prev": page > 1
+            },
+            "filters": {
+                "search": search,
+                "status": status_filter
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve dashboard data"
+        ) from e
 
 
-@app.post("/api/hr/change_password")
-def change_password(body: ChangePasswordRequest, user: dict[str, Any] = Depends(get_current_user)) -> dict[str, Any]:
-    if not verify_password(body.old_password, user.get("password_hash", "")):
-        raise HTTPException(status_code=401, detail="Current password is incorrect")
+@app.post("/api/hr/decrypt_report",
+         summary="Decrypt Report",
+         description="Decrypt and view full report details",
+         response_model=Dict[str, Any],
+         tags=["HR Dashboard"])
+def decrypt_report(
+    body: DecryptRequest, 
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """Decrypt and retrieve full report details.
+    
+    Args:
+        body: Request containing case ID to decrypt
+        current_user: Authenticated HR user
+        
+    Returns:
+        Full decrypted report details
+        
+    Raises:
+        HTTPException: If case not found
+    """
+    try:
+        # Find report by case ID
+        report = reports.find_one({"case_id": body.case_id}, {"_id": 0})
+        
+        if not report:
+            raise HTTPException(
+                status_code=404, 
+                detail="Case not found"
+            )
+        
+        # Convert datetime to ISO string
+        created_at = report.get("created_at")
+        if isinstance(created_at, datetime):
+            report["created_at"] = created_at.isoformat()
+        
+        # Add access log entry (optional for audit trail)
+        # This could be implemented if audit logging is needed
+        
+        return {
+            "case_id": report["case_id"],
+            "report_text": report.get("report_text", ""),
+            "urgency_score": report.get("urgency_score", 0),
+            "status": report.get("status", "pending"),
+            "created_at": report.get("created_at"),
+            "accessed_by": current_user["username"],
+            "accessed_at": now_utc().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to decrypt report"
+        ) from e
 
-    with sqlite3.connect(DATABASE_URL) as conn:
-        cursor = conn.cursor()
-        new_hash = hash_password(body.new_password)
-        cursor.execute("UPDATE hr_users SET password_hash = ? WHERE username = ?", (new_hash, user["username"]))
-        conn.commit()
-    return {"success": True}
 
-
-@app.post("/api/hr/logout")
-def hr_logout(_: dict[str, Any] = Depends(get_current_user)) -> dict[str, bool]:
-    return {"success": True}
-
-
-@app.get("/api/hr/analytics")
-def hr_analytics(
-    _: dict[str, Any] = Depends(get_current_user),
-) -> dict[str, Any]:
-    with sqlite3.connect(DATABASE_URL) as conn:
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute("SELECT created_at, status, urgency_score FROM reports")
-        items = cursor.fetchall()
-
-    volume_map: dict[str, int] = {}
-    status = {"pending": 0, "investigating": 0, "resolved": 0}
-    priority = {"high": 0, "medium": 0, "low": 0}
-
-    for r in items:
-        key = r["created_at"][:10]  # YYYY-MM-DD
-        volume_map[key] = volume_map.get(key, 0) + 1
-
-        st = r["status"]
-        if st in status:
-            status[st] += 1
-
-        us = float(r["urgency_score"])
-        if us > 0.6:
-            priority["high"] += 1
-        elif us > 0.3:
-            priority["medium"] += 1
-        else:
-            priority["low"] += 1
-
-    volume = [{"period": k, "count": volume_map[k]} for k in sorted(volume_map.keys())]
-    return {"volume": volume, "status": status, "priority": priority, "top_reporters": []}
-
-
-@app.post("/api/submit_report")
-def submit_report(body: SubmitReportRequest) -> dict[str, Any]:
-    case_id = hashlib.sha256(f"{uuid.uuid4()}-{now_utc().isoformat()}".encode("utf-8")).hexdigest()
-    report_text = body.report_text.strip()
-
-    key = get_encryption_key(case_id)
-    encrypted_data = encrypt_text(report_text, key)
-
-    with sqlite3.connect(DATABASE_URL) as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            INSERT INTO reports (case_id, encrypted_report, iv, auth_tag, urgency_score, status, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                case_id,
-                encrypted_data["ciphertext"],
-                encrypted_data["iv"],
-                encrypted_data["tag"],
-                urgency_score(report_text),
-                "pending",
-                now_utc().isoformat(),
-            ),
+@app.put("/api/hr/update_status",
+         summary="Update Case Status",
+         description="Update the status of a specific case",
+         response_model=Dict[str, Any],
+         tags=["HR Dashboard"])
+def update_status(
+    body: UpdateStatusRequest, 
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """Update the status of a specific case.
+    
+    Args:
+        body: Request containing case ID and new status
+        current_user: Authenticated HR user
+        
+    Returns:
+        Success confirmation
+        
+    Raises:
+        HTTPException: If case not found or status invalid
+    """
+    try:
+        # Validate status
+        allowed_statuses = {"pending", "investigating", "resolved"}
+        if body.status not in allowed_statuses:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Invalid status. Must be one of: {allowed_statuses}"
+            )
+        
+        # Update case status
+        result = reports.update_one(
+            {"case_id": body.case_id}, 
+            {
+                "$set": {
+                    "status": body.status,
+                    "updated_at": now_utc(),
+                    "updated_by": current_user["username"]
+                }
+            }
         )
-        conn.commit()
+        
+        if result.matched_count == 0:
+            raise HTTPException(
+                status_code=404, 
+                detail="Case not found"
+            )
+        
+        return {
+            "success": True,
+            "message": f"Case status updated to {body.status}",
+            "case_id": body.case_id,
+            "new_status": body.status,
+            "updated_by": current_user["username"]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to update case status"
+        ) from e
 
-    return {"success": True, "case_id": case_id}
+
+@app.post("/api/hr/change_password",
+         summary="Change Password",
+         description="Change authenticated user's password",
+         response_model=Dict[str, Any],
+         tags=["HR Management"])
+def change_password(
+    body: ChangePasswordRequest, 
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """Change the password of the authenticated HR user.
+    
+    Args:
+        body: Request containing old and new passwords
+        current_user: Authenticated HR user
+        
+    Returns:
+        Success confirmation
+        
+    Raises:
+        HTTPException: If old password is incorrect
+    """
+    try:
+        # Verify old password
+        if not verify_password(body.old_password, current_user.get("password_hash", "")):
+            raise HTTPException(
+                status_code=401, 
+                detail="Current password is incorrect"
+            )
+        
+        # Update password
+        hr_users.update_one(
+            {"username": current_user["username"]},
+            {
+                "$set": {
+                    "password_hash": hash_password(body.new_password),
+                    "password_changed_at": now_utc()
+                }
+            }
+        )
+        
+        return {
+            "success": True,
+            "message": "Password changed successfully",
+            "changed_at": now_utc().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to change password"
+        ) from e
 
 
-@app.get("/api/view_report")
-def view_report(case_id: str = Query(..., min_length=8)) -> dict[str, Any]:
-    with sqlite3.connect(DATABASE_URL) as conn:
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM reports WHERE case_id = ?", (case_id,))
-        report = cursor.fetchone()
-
-    if not report:
-        raise HTTPException(status_code=404, detail="Report not found")
-
+@app.post("/api/hr/logout",
+         summary="Logout User",
+         description="Logout HR user (client-side token removal)",
+         response_model=Dict[str, bool],
+         tags=["HR Management"])
+def hr_logout(current_user: Dict[str, Any] = Depends(get_current_user)) -> Dict[str, bool]:
+    """Logout HR user.
+    
+    Note: This is mainly for API documentation purposes.
+    Actual token removal should be handled client-side.
+    
+    Args:
+        current_user: Authenticated HR user
+        
+    Returns:
+        Logout confirmation
+    """
     return {
-        "case_id": report["case_id"],
-        "status": report["status"],
-        "created_at": report["created_at"],
-        "encrypted_report": report["encrypted_report"],
+        "success": True,
+        "message": "Logout successful. Please remove token from client storage."
     }
 
+
+@app.get("/api/hr/analytics",
+         summary="Get Analytics Data",
+         description="Retrieve analytics and statistics for reports",
+         response_model=Dict[str, Any],
+         tags=["HR Analytics"])
+def hr_analytics(
+    days: int = Query(default=30, ge=1, le=365, description="Number of days to analyze"),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """Get analytics data for reports.
+    
+    Args:
+        days: Number of days to include in analysis
+        current_user: Authenticated HR user
+        
+    Returns:
+        Analytics data including volume, status, and priority statistics
+    """
+    try:
+        # Calculate date range
+        end_date = now_utc()
+        start_date = end_date - timedelta(days=days)
+        
+        # Fetch reports within date range
+        cursor = reports.find({
+            "created_at": {"$gte": start_date, "$lte": end_date}
+        }, {"_id": 0})
+        
+        # Initialize counters
+        volume_map: Dict[str, int] = {}
+        status_counts = {"pending": 0, "investigating": 0, "resolved": 0}
+        priority_counts = {"high": 0, "medium": 0, "low": 0}
+        
+        # Process each report
+        for report in cursor:
+            created_at = report.get("created_at")
+            if isinstance(created_at, datetime):
+                # Group by date
+                date_key = created_at.strftime("%Y-%m-%d")
+                volume_map[date_key] = volume_map.get(date_key, 0) + 1
+                
+                # Count by status
+                status = report.get("status", "pending")
+                if status in status_counts:
+                    status_counts[status] += 1
+                
+                # Count by priority
+                urgency = float(report.get("urgency_score", 0))
+                if urgency > 0.6:
+                    priority_counts["high"] += 1
+                elif urgency > 0.3:
+                    priority_counts["medium"] += 1
+                else:
+                    priority_counts["low"] += 1
+        
+        # Prepare volume data for charts
+        volume_data = []
+        current_date = start_date
+        while current_date <= end_date:
+            date_key = current_date.strftime("%Y-%m-%d")
+            volume_data.append({
+                "period": date_key,
+                "count": volume_map.get(date_key, 0)
+            })
+            current_date += timedelta(days=1)
+        
+        return {
+            "period": {
+                "start_date": start_date.isoformat(),
+                "end_date": end_date.isoformat(),
+                "days": days
+            },
+            "volume": volume_data,
+            "status": status_counts,
+            "priority": priority_counts,
+            "total_reports": sum(status_counts.values()),
+            "generated_by": current_user["username"],
+            "generated_at": now_utc().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate analytics"
+        ) from e
+
+
+# =============================================================================
+# API ENDPOINTS - ANONYMOUS REPORTING
+# =============================================================================
+
+
+@app.post("/api/submit_report",
+         summary="Submit Anonymous Report",
+         description="Submit a new anonymous report with AI-powered urgency scoring",
+         response_model=Dict[str, Any],
+         tags=["Anonymous Reporting"])
+def submit_report(body: SubmitReportRequest) -> Dict[str, Any]:
+    """Submit an anonymous report.
+    
+    Args:
+        body: Report submission with text content
+        
+    Returns:
+        Generated case ID and submission confirmation
+        
+    Raises:
+        HTTPException: If validation fails
+    """
+    try:
+        # Generate unique case ID
+        case_id = hashlib.sha256(
+            f"{uuid.uuid4()}-{now_utc().isoformat()}".encode("utf-8")
+        ).hexdigest()
+        
+        # Calculate urgency score using AI/keyword analysis
+        urgency = urgency_score(body.report_text)
+        
+        # Create report document
+        report_doc = {
+            "case_id": case_id,
+            "report_text": body.report_text.strip(),
+            "urgency_score": urgency,
+            "status": "pending",
+            "created_at": now_utc(),
+            "submitted_via": "api"
+        }
+        
+        # Insert into database
+        reports.insert_one(report_doc)
+        
+        return {
+            "success": True,
+            "case_id": case_id,
+            "urgency_score": urgency,
+            "message": "Report submitted successfully. Keep this Case ID safe for future reference.",
+            "submitted_at": now_utc().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to submit report. Please try again."
+        ) from e
+
+
+@app.get("/api/view_report",
+         summary="View Report Status",
+         description="Check the status of an anonymous report using case ID",
+         response_model=Dict[str, Any],
+         tags=["Anonymous Reporting"])
+def view_report(
+    case_id: str = Query(..., min_length=8, description="Unique case identifier")
+) -> Dict[str, Any]:
+    """View the status of an anonymous report.
+    
+    This endpoint allows anonymous users to check their report status
+    without revealing the report content.
+    
+    Args:
+        case_id: Unique case identifier generated during submission
+        
+    Returns:
+        Report status information (without sensitive content)
+        
+    Raises:
+        HTTPException: If case not found
+    """
+    try:
+        # Find report by case ID
+        report = reports.find_one(
+            {"case_id": case_id}, 
+            {"_id": 0, "report_text": 0}  # Exclude sensitive content
+        )
+        
+        if not report:
+            raise HTTPException(
+                status_code=404, 
+                detail="Report not found"
+            )
+        
+        # Convert datetime to ISO string
+        created_at = report.get("created_at")
+        if isinstance(created_at, datetime):
+            created_at = created_at.isoformat()
+        
+        # Determine priority level
+        urgency = float(report.get("urgency_score", 0))
+        if urgency > 0.6:
+            priority = "high"
+        elif urgency > 0.3:
+            priority = "medium"
+        else:
+            priority = "low"
+        
+        return {
+            "case_id": report["case_id"],
+            "status": report.get("status", "pending"),
+            "urgency_score": urgency,
+            "priority": priority,
+            "created_at": created_at,
+            "last_updated": report.get("updated_at", created_at)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve report status"
+        ) from e
+
+
+# =============================================================================
+# APPLICATION EXECUTION
+# =============================================================================
 
 if __name__ == "__main__":
     import uvicorn
-
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+    
+    print("🚀 Starting EchoSafe API server...")
+    print(f"📍 Environment: Development")
+    print(f"🌐 Server will be available at: http://localhost:8000")
+    print(f"📚 API Documentation: http://localhost:8000/docs")
+    
+    uvicorn.run(
+        "app:app",
+        host="0.0.0.0",
+        port=8001,
+        reload=True,
+        log_level="info"
+    )

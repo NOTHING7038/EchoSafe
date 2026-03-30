@@ -3,218 +3,1314 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EchoSafe - HR Investigator Portal</title>
+    <title>EchoSafe HR Portal</title>
     <style>
-        :root {
-            --bg-1: #0f1f3d;
-            --bg-2: #17305b;
-            --panel: #f5f7fb;
-            --ink: #0f172a;
-            --primary: #1d4ed8;
-            --card: #ffffff;
-            --border: #dbe3f4;
-            --table-header: #f8fafc;
-            --modal-bg: rgba(0,0,0,0.5);
-        }
-        body.dark-mode {
-            --bg-1: #93c5fd;
-            --panel: #0f172a;
-            --ink: #f1f5f9;
-            --card: #1e293b;
-            --border: #334155;
-            --table-header: #0f172a;
-            --modal-bg: rgba(255,255,255,0.1);
-        }
-        body {
-            font-family: "Segoe UI", Tahoma, sans-serif;
-            background: var(--panel) radial-gradient(circle at 15% 20%, rgba(29, 78, 216, 0.05) 0%, transparent 40%);
-            color: var(--ink);
+        * {
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #667eea;
+            --primary-dark: #764ba2;
+            --secondary: #f093fb;
+            --danger: #ef4444;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --dark: #1f2937;
+            --gray: #6b7280;
+            --light: #f3f4f6;
+            --white: #ffffff;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.15);
+            --bg: #ffffff;
+            --text: #1f2937;
+            --border: #e5e7eb;
+        }
+
+        body.dark-mode {
+            --bg: #1f2937;
+            --text: #f3f4f6;
+            --border: #374151;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--light);
+            color: var(--dark);
+            line-height: 1.6;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        body.dark-mode {
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .layout {
             display: flex;
-            justify-content: center;
-            align-items: flex-start;
             min-height: 100vh;
         }
-        .container {
-            background: var(--card);
-            width: 100%;
-            max-width: 900px;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-            border: 1px solid var(--border);
-            margin-top: 40px;
-            transition: all 0.3s ease;
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
         }
-        h1, h2, h3 { margin-top: 0; color: var(--bg-1); }
-        input { padding: 12px; margin: 10px 0; border-radius: 6px; border: 1px solid var(--border); width: 100%; box-sizing: border-box; background: var(--card); color: var(--ink); }
-        button { background: var(--primary); padding: 10px 15px; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; }
-        button:hover { opacity: 0.9; }
-        .header-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 10px; }
-        .nav-buttons { display: flex; gap: 10px; }
-        .nav-buttons button { width: auto; }
-        #logoutBtn { background: #ef4444; }
-        #themeToggleBtn { background: #64748b; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
-        th { background: var(--table-header); }
-        
-        .badge { padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; color: white; text-transform: uppercase;}
-        .badge.high { background: #ef4444; }
-        .badge.medium { background: #f59e0b; }
-        .badge.low { background: #10b981; }
-        
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--modal-bg); place-items: center; backdrop-filter: blur(2px); }
-        .modal-content { background: var(--card); padding: 30px; border-radius: 12px; max-width: 600px; width: 90%; border: 1px solid var(--border); }
-        .actions { display: flex; gap: 10px; margin-top: 20px;}
-        .actions button { width: auto; flex: 1; }
-        .btn-secondary { background: #64748b; }
-        #modalReportText { background: var(--panel) !important; color: var(--ink); border-color: var(--border) !important; }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            padding: 15px;
+            text-align: center;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-item {
+            padding: 12px 15px;
+            margin: 8px 0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(5px);
+        }
+
+        .user-info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        /* Main Content */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .topbar {
+            background: white;
+            padding: 15px 25px;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--light);
+        }
+
+        body.dark-mode .topbar {
+            background: #374151;
+            border-bottom-color: var(--border);
+        }
+
+        .topbar-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        body.dark-mode .topbar-title {
+            color: var(--text);
+        }
+
+        .topbar-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .theme-toggle {
+            background: rgba(102, 126, 234, 0.2);
+            border: none;
+            color: var(--primary);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(102, 126, 234, 0.3);
+        }
+
+        body.dark-mode .theme-toggle {
+            background: rgba(143, 165, 245, 0.2);
+            color: #8fa5f5;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-secondary {
+            background: var(--light);
+            color: var(--dark);
+            border: 1px solid var(--border);
+        }
+
+        body.dark-mode .btn-secondary {
+            background: #374151;
+            color: var(--text);
+            border-color: var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+
+        body.dark-mode .btn-secondary:hover {
+            background: #4b5563;
+        }
+
+        .btn-secondary {
+            background: var(--light);
+            color: var(--dark);
+            border: 1px solid #d1d5db;
+        }
+
+        body.dark-mode .btn-secondary {
+            background: #374151;
+            color: var(--text);
+            border-color: var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: white;
+        }
+
+        body.dark-mode .btn-secondary:hover {
+            background: #4b5563;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            opacity: 0.9;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 25px;
+            background: var(--light);
+        }
+
+        body.dark-mode .content {
+            background: var(--bg);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--primary);
+        }
+
+        body.dark-mode .stat-card {
+            background: #374151;
+            color: var(--text);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--gray);
+            margin-top: 5px;
+        }
+
+        .search-bar {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* Cases Table */
+        .cases-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+            /* search bar styling */
+            .search-bar {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 20px;
+                justify-content: flex-end;
+            }
+            .search-bar input {
+                flex: 1;
+                padding: 8px 12px;
+                border: 1px solid var(--border);
+                border-radius: 6px;
+                background: var(--bg);
+                color: var(--text);
+            }
+            .search-bar button {
+                padding: 8px 16px;
+                background: var(--primary);
+                color: white;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+            }
+            body.dark-mode .search-bar input {
+                background: #374151;
+                border-color: var(--border);
+                color: var(--text);
+            }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table thead {
+            background: var(--light);
+            border-bottom: 2px solid #d1d5db;
+        }
+
+        body.dark-mode .table thead {
+            background: #374151;
+            border-bottom-color: var(--border);
+        }
+
+        .table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 14px;
+        }
+
+        body.dark-mode .table th {
+            color: var(--text);
+        }
+
+        .table td {
+            padding: 15px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 14px;
+            color: inherit;
+        }
+
+        body.dark-mode .table td {
+            border-bottom-color: var(--border);
+            color: var(--text);
+        }
+
+        .table tr:hover {
+            background: var(--light);
+            cursor: pointer;
+        }
+
+        body.dark-mode .table tr:hover {
+            background: #4b5563;
+        }
+
+        .priority-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .priority-high {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        body.dark-mode .priority-high {
+            background: rgba(220, 53, 69, 0.2);
+            color: #f5a6a6;
+        }
+
+        .priority-medium {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        body.dark-mode .priority-medium {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbb021;
+        }
+
+        .priority-low {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        /* analytics filter labels */
+        .analytics-filters label {
+            font-size: 14px;
+            color: var(--dark);
+        }
+        body.dark-mode .analytics-filters label {
+            color: var(--text);
+        }
+
+        body.dark-mode .priority-low {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-investigating {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        body.dark-mode .status-investigating {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+        }
+
+        .status-resolved {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        body.dark-mode .status-resolved {
+            background: rgba(16, 185, 129, 0.2);
+            color: #6ee7b7;
+        }
+
+        .case-id {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: var(--gray);
+            word-break: break-all;
+        }
+
+        body.dark-mode .case-id {
+            color: #9ca3af;
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+            padding: 15px;
+        }
+
+        .pagination-btn {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: var(--dark);
+        }
+
+        .pagination-btn.page-info {
+            background: transparent;
+            border: none;
+            cursor: default;
+            font-weight: 600;
+            color: var(--gray);
+        }
+
+        body.dark-mode .pagination-btn {
+            background: #374151;
+            border-color: var(--border);
+            color: var(--text);
+        }
+
+        .pagination-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .pagination-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+            color: var(--dark);
+        }
+
+        body.dark-mode .modal-content {
+            background: #374151;
+            color: var(--text);
+        }
+
+        .modal-header {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--dark);
+        }
+
+        body.dark-mode .modal-header {
+            color: var(--text);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--gray);
+        }
+
+        body.dark-mode .modal-close {
+            color: #9ca3af;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--dark);
+        }
+
+        body.dark-mode .form-group label {
+            color: var(--text);
+        }
+
+        .form-group select {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            color: var(--dark);
+        }
+
+        body.dark-mode .form-group select {
+            background: #4b5563;
+            color: var(--text);
+            border-color: var(--border);
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f4f6;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--gray);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+            animation: slideIn 0.3s ease;
+            z-index: 2000;
+        }
+
+        .toast-success {
+            background: var(--success);
+        }
+
+        .toast-error {
+            background: var(--danger);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -250px;
+                height: 100vh;
+                z-index: 999;
+                transition: left 0.3s;
+            }
+
+            .sidebar.active {
+                left: 0;
+            }
+
+            .layout {
+                flex-direction: column;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
-
-    <div class="container">
-        <div class="header-nav">
-            <h2>HR Investigator Dashboard</h2>
-            <div class="nav-buttons">
-                <button id="themeToggleBtn" onclick="toggleTheme()">🌙 Theme</button>
-                <button id="logoutBtn" style="display:none;" onclick="logout()">Logout</button>
+    <div class="layout">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">🔐 HR Portal</div>
+            <div class="nav-item active" onclick="switchView('dashboard', this)">📊 Dashboard</div>
+            <div class="nav-item" onclick="switchView('cases', this)">📋 Cases</div>
+            <div class="nav-item" onclick="switchView('analytics', this)">📈 Analytics</div>
+            <div class="user-info">
+                <div id="userDisplay">Loading...</div>
+                <!-- make logout button more compact -->
+                <button class="btn btn-secondary" onclick="logout()" style="width: auto; min-width: 80px; margin-top: 10px; padding: 4px 10px; font-size: 13px;">Logout</button>
             </div>
         </div>
 
-        <!-- Login View -->
-        <div id="loginSection">
-            <p>Please log in with your credentials to decrypt and view reports.</p>
-            <form id="loginForm">
-                <input type="text" id="username" placeholder="Username" required>
-                <input type="password" id="password" placeholder="Password" required>
-                <button type="submit">Secure Login</button>
-            </form>
-        </div>
+        <!-- Main Content -->
+        <div class="main">
+            <!-- Topbar -->
+            <div class="topbar">
+                <div class="topbar-title" id="pageTitle">Dashboard</div>
+                <div class="topbar-actions">
+                    <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+                    <button class="btn btn-secondary" onclick="goToAccessHome()">Access Home</button>
+                    <button class="btn btn-secondary" onclick="goToReportingPortal()">Reporting</button>
+                    <button class="btn btn-primary" onclick="refreshData()">🔄 Refresh</button>
+                    <button class="btn btn-secondary" onclick="changePassword()">🔐 Change Password</button>
+                </div>
+            </div>
 
-        <!-- Dashboard View -->
-        <div id="dashboardSection" style="display: none;">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Date Submitted</th>
-                        <th>AI Urgency</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="reportsTable">
-                    <!-- Populated by JS -->
-                </tbody>
-            </table>
+            <!-- Content -->
+            <div class="content">
+                <!-- Dashboard View -->
+                <div id="dashboardView" style="display: block;">
+                    <div class="stats">
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalCases">0</div>
+                            <div class="stat-label">Total Cases</div>
+                        </div>
+                        <div class="stat-card" style="border-left-color: var(--danger);">
+                            <div class="stat-value" id="highPriority" style="color: var(--danger);">0</div>
+                            <div class="stat-label">High Priority</div>
+                        </div>
+                        <div class="stat-card" style="border-left-color: var(--warning);">
+                            <div class="stat-value" id="pending" style="color: var(--warning);">0</div>
+                            <div class="stat-label">Pending Cases</div>
+                        </div>
+                        <div class="stat-card" style="border-left-color: var(--success);">
+                            <div class="stat-value" id="resolved" style="color: var(--success);">0</div>
+                            <div class="stat-label">Resolved Cases</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cases View -->
+                <div id="casesView" style="display: none;">
+                    <div class="search-bar">
+                        <input type="text" id="searchInput" class="search-input" placeholder="Search case ID or keywords...">
+                        <button class="btn btn-primary" onclick="applySearch()">Search</button>
+                    </div>
+
+                    <div class="cases-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Case ID</th>
+                                    <th>Priority</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="casesTable">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; padding: 40px;">
+                                        <div class="spinner"></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination" id="pagination"></div>
+                </div>
+
+                <!-- Analytics View -->
+                <div id="analyticsView" style="display: none;">
+                    <div class="analytics-filters" style="padding: 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+                        <label>Start: <input type="date" id="startDate" /></label>
+                        <label>End: <input type="date" id="endDate" /></label>
+                        <label>Status:
+                            <select id="filterStatus">
+                                <option value="">All</option>
+                                <option value="pending">Pending</option>
+                                <option value="investigating">Investigating</option>
+                                <option value="resolved">Resolved</option>
+                            </select>
+                        </label>
+                        <label>Group by:
+                            <select id="groupBy">
+                                <option value="day">Day</option>
+                                <option value="week">Week</option>
+                                <option value="month">Month</option>
+                            </select>
+                        </label>
+                        <label>Priority:
+                            <select id="filterPriority">
+                                <option value="">All</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                        </label>
+                        <button class="btn btn-primary" onclick="loadAnalytics()">Apply</button>
+                    </div>
+                    <div style="padding: 20px;">
+                        <canvas id="volumeChart" height="100"></canvas>
+                    </div>
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; padding: 20px;">
+                        <canvas id="statusChart" width="300" height="300"></canvas>
+                        <canvas id="priorityChart" width="300" height="300"></canvas>
+                    </div>
+                    <div id="topReportersContainer" style="padding: 20px; text-align: center; color: var(--gray);"></div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Decryption Modal -->
-    <div id="caseModal" class="modal">
+    <!-- Case Detail Modal -->
+    <div class="modal" id="caseModal">
         <div class="modal-content">
-            <h3>Decrypted Case Details</h3>
-            <p><strong>Case ID:</strong> <span id="modalCaseId" style="font-family: monospace; font-size: 12px;"></span></p>
-            <p><strong>Submitted:</strong> <span id="modalDate"></span></p>
-            <div style="background:#f8fafc; padding:15px; border-radius:5px; margin: 15px 0; border: 1px solid #e2e8f0; line-height: 1.5;" id="modalReportText"></div>
-            
-            <h4>Update Investigation Status</h4>
-            <div class="actions">
-                <button onclick="updateStatus('investigating')">Mark Investigating</button>
-                <button onclick="updateStatus('resolved')" style="background: #10b981;">Mark Resolved</button>
-                <button class="btn-secondary" onclick="closeModal()">Close</button>
+            <button class="modal-close" onclick="closeCaseModal()">&times;</button>
+            <div class="modal-header">Case Details</div>
+            <div id="caseDetails" style="margin-bottom: 20px;">
+                <div style="text-align: center;"><div class="spinner"></div></div>
+            </div>
+            <div class="form-group">
+                <label>Update Status</label>
+                <select id="statusSelect" onchange="updateCaseStatus()">
+                    <option value="">-- Select Status --</option>
+                    <option value="pending">Pending</option>
+                    <option value="investigating">Investigating</option>
+                    <option value="resolved">Resolved</option>
+                </select>
             </div>
         </div>
     </div>
 
     <script>
-        const API_BASE = "http://localhost:8000/api";
-        let token = localStorage.getItem('hr_token');
-        let currentCaseId = null;
+        function resolveApiBase() {
+            const fromQuery = new URLSearchParams(window.location.search).get('api');
+            const fromStorage = localStorage.getItem('echosafeApiBase') || localStorage.getItem('hrApiBase');
+            if (fromQuery) return fromQuery.replace(/\/$/, '');
+            if (fromStorage) return fromStorage.replace(/\/$/, '');
+            const host = window.location.hostname || 'localhost';
+            const protocol = window.location.protocol === 'file:' ? 'http:' : window.location.protocol;
+            return `${protocol}//${host}:8001/api`;
+        }
 
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
-            try {
-                const res = await fetch(`${API_BASE}/hr/login`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({username, password})
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    token = data.token;
-                    localStorage.setItem('hr_token', token);
-                    showDashboard();
-                } else { alert(data.detail || 'Login failed. Check credentials.'); }
-            } catch (err) { alert('Cannot connect to backend API on port 8000.'); }
+        const API_BASE = resolveApiBase();
+        localStorage.setItem('echosafeApiBase', API_BASE);
+        let token = localStorage.getItem('hrToken');
+        let currentPage = 1;
+        let currentCaseId = null;
+        let allCases = [];
+
+        function portalUrl(path) {
+            return `${path}?api=${encodeURIComponent(API_BASE)}`;
+        }
+
+        function goToAccessHome() {
+            window.location.href = 'http://localhost:3000';
+        }
+
+        function goToReportingPortal() {
+            window.location.href = 'http://localhost:8080';
+        }
+
+        // Check authentication on load
+        window.addEventListener('load', () => {
+            if (!token) {
+                showLoginForm();
+            } else {
+                loadDashboard();
+            }
+            // Initialize theme
+            const savedTheme = localStorage.getItem('hrTheme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+            }
+            updateThemeToggleIcon();
         });
 
-        async function showDashboard() {
-            if (!token) return;
-            document.getElementById('loginSection').style.display = 'none';
-            document.getElementById('dashboardSection').style.display = 'block';
-            document.getElementById('logoutBtn').style.display = 'block';
+        // Dark mode toggle
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            localStorage.setItem('hrTheme', isDarkMode ? 'dark' : 'light');
+            updateThemeToggleIcon();
+        }
+
+        function updateThemeToggleIcon() {
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            const toggleBtn = document.querySelector('.theme-toggle');
+            if (toggleBtn) {
+                toggleBtn.textContent = isDarkMode ? '☀️' : '🌙';
+            }
+        }
+
+        function showLoginForm() {
+            document.querySelector('.sidebar').style.display = 'none';
+            document.querySelector('.topbar').style.display = 'none';
+            const content = document.querySelector('.content');
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            const bgColor = isDarkMode ? '#374151' : 'white';
+            const textColor = isDarkMode ? '#f3f4f6' : '#333';
+            const inputBg = isDarkMode ? '#4b5563' : 'white';
+            const inputBorder = isDarkMode ? '#555555' : '#d1d5db';
             
-            const res = await fetch(`${API_BASE}/hr/dashboard`, { headers: {'Authorization': `Bearer ${token}`} });
-            const data = await res.json();
-            
-            if (res.ok) {
-                const tbody = document.getElementById('reportsTable');
-                tbody.innerHTML = '';
-                data.reports.forEach(r => {
-                    let uClass = r.urgency_score > 0.6 ? 'high' : (r.urgency_score > 0.3 ? 'medium' : 'low');
-                    let uText = r.urgency_score > 0.6 ? 'High' : (r.urgency_score > 0.3 ? 'Medium' : 'Low');
-                    tbody.innerHTML += `<tr>
-                        <td>${new Date(r.created_at).toLocaleString()}</td>
-                        <td><span class="badge ${uClass}">${uText}</span></td>
-                        <td><strong>${r.status}</strong></td>
-                        <td><button onclick="viewCase('${r.case_id}')">Decrypt</button></td>
-                    </tr>`;
+            content.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh;">
+                    <div style="background: ${bgColor}; padding: 40px; border-radius: 8px; box-shadow: var(--shadow-lg); max-width: 400px; width: 100%; color: ${textColor};">
+                        <h2 style="margin-bottom: 20px; text-align: center; color: ${textColor};">HR Portal Login</h2>
+                        
+                        <div class="form-group">
+                            <label style="color: ${textColor};">Username</label>
+                            <input type="text" id="loginUsername" placeholder="Enter username" style="width: 100%; padding: 10px; border: 1px solid ${inputBorder}; border-radius: 6px; background: ${inputBg}; color: ${textColor};">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label style="color: ${textColor};">Password</label>
+                            <input type="password" id="loginPassword" placeholder="Enter password" style="width: 100%; padding: 10px; border: 1px solid ${inputBorder}; border-radius: 6px; background: ${inputBg}; color: ${textColor};">
+                        </div>
+                        
+                        <button class="btn btn-primary" onclick="hrLogin()" style="width: 100%; padding: 12px;">Login</button>
+                        <div style="display:flex; gap:10px; margin-top: 10px;">
+                            <button class="btn btn-secondary" onclick="goToAccessHome()" style="flex:1; padding: 10px;">Access Home</button>
+                            <button class="btn btn-secondary" onclick="goToReportingPortal()" style="flex:1; padding: 10px;">Reporting</button>
+                        </div>
+                        
+                        <div id="loginMessage" style="margin-top: 15px; text-align: center; color: var(--danger);"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function hrLogin() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const message = document.getElementById('loginMessage');
+
+            if (!username || !password) {
+                message.textContent = 'Username and password required';
+                return;
+            }
+
+            try {
+                message.innerHTML = '<div class="spinner"></div>';
+                const response = await fetch(`${API_BASE}/hr/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
                 });
-            } else { logout(); } // Token expired
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    token = data.token;
+                    localStorage.setItem('hrToken', token);
+                    showToast('Login successful!', 'success');
+                    loadDashboard();
+                } else {
+                    message.textContent = data.detail || 'Login failed';
+                }
+            } catch (error) {
+                if (error && error.message && error.message.includes('Failed to fetch')) {
+                    message.textContent = `Cannot reach API at ${API_BASE}. Start backend on port 8001 and check CORS.`;
+                } else {
+                    message.textContent = 'Error: ' + error.message;
+                }
+            }
+        }
+
+        async function loadDashboard() {
+            document.querySelector('.sidebar').style.display = 'block';
+            document.querySelector('.topbar').style.display = 'flex';
+            await loadCases();
+            await updateStats();
+        }
+
+        // keep track of the current search term so pagination can respect it
+        let currentSearchTerm = '';
+
+        async function loadCases(page = 1, searchTerm = '') {
+            try {
+                const params = new URLSearchParams();
+                params.append('page', page);
+                params.append('limit', 10);
+                if (searchTerm) {
+                    params.append('search', searchTerm);
+                    currentSearchTerm = searchTerm;
+                }
+                const response = await fetch(`${API_BASE}/hr/dashboard?` + params.toString(), {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    allCases = data.reports;
+                    document.getElementById('userDisplay').textContent = `👤 ${data.investigator}`;
+                    renderCasesTable(data.reports);
+                    renderPagination(data.pagination);
+                }
+            } catch (error) {
+                showToast('Error loading cases: ' + error.message, 'error');
+            }
+        }
+
+        function renderCasesTable(cases) {
+            const tbody = document.getElementById('casesTable');
+            
+            if (cases.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No cases found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = cases.map(report => {
+                const urgency = report.urgency_score;
+                const priorityClass = urgency > 0.6 ? 'priority-high' : (urgency > 0.3 ? 'priority-medium' : 'priority-low');
+                const priorityLabel = urgency > 0.6 ? 'HIGH' : (urgency > 0.3 ? 'MEDIUM' : 'LOW');
+                
+                return `
+                    <tr onclick="viewCase('${report.case_id}')">
+                        <td><span class="case-id">${report.case_id.substring(0, 16)}...</span></td>
+                        <td><span class="priority-badge ${priorityClass}">${priorityLabel}</span></td>
+                        <td><span class="status-badge status-${report.status}">${report.status.toUpperCase()}</span></td>
+                        <td>${new Date(report.created_at).toLocaleDateString()}</td>
+                        <td><button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;">View</button></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderPagination(pagination) {
+            const paginationDiv = document.getElementById('pagination');
+            // hide pagination entirely if only one page or no data
+            if (!pagination || pagination.pages <= 1) {
+                paginationDiv.innerHTML = '';
+                return;
+            }
+            let html = '';
+            if (pagination.page > 1) {
+                html += `<button class="pagination-btn" onclick="loadCases(${pagination.page - 1}, currentSearchTerm)">← Previous</button>`;
+            }
+            html += `<span class="pagination-btn page-info">Page ${pagination.page} of ${pagination.pages}</span>`;
+            if (pagination.page < pagination.pages) {
+                html += `<button class="pagination-btn" onclick="loadCases(${pagination.page + 1}, currentSearchTerm)">Next →</button>`;
+            }
+            paginationDiv.innerHTML = html;
+        }
+
+            // analytics chart references
+            let volumeChartInstance = null;
+            let statusChartInstance = null;
+            let priorityChartInstance = null;
+
+            async function loadAnalytics() {
+                const start = document.getElementById('startDate').value;
+                const end = document.getElementById('endDate').value;
+                const status = document.getElementById('filterStatus').value;
+                const priority = document.getElementById('filterPriority').value;
+                const groupBy = document.getElementById('groupBy').value;
+                const params = new URLSearchParams();
+                if (start) params.append('start', start);
+                if (end) params.append('end', end);
+                if (groupBy) params.append('group', groupBy);
+                if (status) params.append('status', status);
+                if (priority) params.append('priority', priority);
+
+                const res = await fetch(`${API_BASE}/hr/analytics?` + params.toString(), {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+
+                // volume chart
+                const labels = data.volume.map(v => v.period);
+                const counts = data.volume.map(v => v.count);
+                const ctxVol = document.getElementById('volumeChart').getContext('2d');
+                if (volumeChartInstance) volumeChartInstance.destroy();
+                volumeChartInstance = new Chart(ctxVol, {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: 'Reports',
+                            data: counts,
+                            fill: true,
+                            borderColor: 'rgba(102,126,234,1)',
+                            backgroundColor: 'rgba(102,126,234,0.2)'
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+
+                // status chart
+                const statusLabels = Object.keys(data.status);
+                const statusValues = statusLabels.map(k => data.status[k]);
+                const ctxStatus = document.getElementById('statusChart').getContext('2d');
+                if (statusChartInstance) statusChartInstance.destroy();
+                statusChartInstance = new Chart(ctxStatus, {
+                    type: 'pie',
+                    data: {
+                        labels: statusLabels,
+                        datasets: [{
+                            data: statusValues,
+                            backgroundColor: ['#fbbf24','#3b82f6','#10b981']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+
+                // priority chart
+                const priLabels = Object.keys(data.priority);
+                const priValues = priLabels.map(k => data.priority[k]);
+                const ctxPri = document.getElementById('priorityChart').getContext('2d');
+                if (priorityChartInstance) priorityChartInstance.destroy();
+                priorityChartInstance = new Chart(ctxPri, {
+                    type: 'doughnut',
+                    data: {
+                        labels: priLabels,
+                        datasets: [{
+                            data: priValues,
+                            backgroundColor: ['#ef4444','#f59e0b','#3b82f6']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+
+                const reportersDiv = document.getElementById('topReportersContainer');
+                if (data.top_reporters && data.top_reporters.length) {
+                    reportersDiv.innerHTML = '<h4>Top Reporters</h4>' +
+                        '<ul>' + data.top_reporters.map(r => `<li>${r.name}: ${r.count}</li>`).join('') + '</ul>';
+                } else {
+                    reportersDiv.textContent = 'Top reporters data not available';
+                }
+            }
+
+        async function updateStats() {
+            try {
+                const response = await fetch(`${API_BASE}/hr/dashboard?page=1&limit=1000`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const data = await response.json();
+                const reports = data.reports;
+
+                document.getElementById('totalCases').textContent = data.pagination.total;
+                document.getElementById('highPriority').textContent = reports.filter(r => r.urgency_score > 0.6).length;
+                document.getElementById('pending').textContent = reports.filter(r => r.status === 'pending').length;
+                document.getElementById('resolved').textContent = reports.filter(r => r.status === 'resolved').length;
+            } catch (error) {
+                console.error('Error updating stats:', error);
+            }
         }
 
         async function viewCase(caseId) {
             currentCaseId = caseId;
-            const res = await fetch(`${API_BASE}/hr/decrypt_report`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({case_id: caseId})
-            });
-            const data = await res.json();
-            if (res.ok) {
-                document.getElementById('modalCaseId').textContent = data.case_id;
-                document.getElementById('modalDate').textContent = new Date(data.created_at).toLocaleString();
-                document.getElementById('modalReportText').textContent = data.report_text;
-                document.getElementById('caseModal').style.display = 'grid';
-            } else { alert('Failed to decrypt report.'); }
+            const modal = document.getElementById('caseModal');
+            const details = document.getElementById('caseDetails');
+
+            modal.classList.add('active');
+
+            try {
+                details.innerHTML = '<div style="text-align: center;"><div class="spinner"></div></div>';
+                const response = await fetch(`${API_BASE}/hr/decrypt_report`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ case_id: caseId })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    details.innerHTML = `
+                        <div style="margin-bottom: 20px;">
+                            <label style="font-weight: 600; color: var(--gray);">Case ID</label>
+                            <div style="font-family: monospace; font-size: 12px; color: var(--gray); word-break: break-all; padding: 10px; background: var(--light); border-radius: 4px;">${data.case_id}</div>
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; color: var(--gray);">Report</label>
+                            <div style="padding: 15px; background: var(--light); border-radius: 4px; max-height: 300px; overflow-y: auto;">${data.report_text}</div>
+                        </div>
+                    `;
+                    document.getElementById('statusSelect').value = allCases.find(c => c.case_id === caseId).status;
+                } else {
+                    details.innerHTML = `<div style="color: var(--danger);">${data.detail || 'Failed to load case'}</div>`;
+                }
+            } catch (error) {
+                details.innerHTML = `<div style="color: var(--danger);">Error: ${error.message}</div>`;
+            }
         }
 
-        async function updateStatus(status) {
-            const res = await fetch(`${API_BASE}/hr/update_status`, {
-                method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({case_id: currentCaseId, status: status})
-            });
-            if (res.ok) { closeModal(); showDashboard(); }
+        async function updateCaseStatus() {
+            const status = document.getElementById('statusSelect').value;
+            if (!status) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/hr/update_status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ case_id: currentCaseId, status })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showToast('Status updated successfully', 'success');
+                    closeCaseModal();
+                    loadCases();
+                } else {
+                    showToast(data.detail || 'Failed to update status', 'error');
+                }
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+            }
         }
 
-        function closeModal() { document.getElementById('caseModal').style.display = 'none'; }
-        function logout() { token = null; localStorage.removeItem('hr_token'); window.location.reload(); }
-
-        function toggleTheme() {
-            document.body.classList.toggle('dark-mode');
-            localStorage.setItem('hr_theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
-        }
-        if (localStorage.getItem('hr_theme') === 'dark') {
-            document.body.classList.add('dark-mode');
+        function closeCaseModal() {
+            document.getElementById('caseModal').classList.remove('active');
         }
 
-        if (token) showDashboard(); // Auto-login if token exists
+        function switchView(view, clickedNav) {
+            document.querySelectorAll('[id$="View"]').forEach(el => el.style.display = 'none');
+            document.getElementById(view + 'View').style.display = 'block';
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            if (clickedNav) {
+                clickedNav.classList.add('active');
+            }
+
+            const titles = {
+                'dashboard': 'Dashboard',
+                'cases': 'Cases',
+                'analytics': 'Analytics'
+            };
+            document.getElementById('pageTitle').textContent = titles[view];
+
+            if (view === 'cases') loadCases();
+            if (view === 'analytics') loadAnalytics();
+        }
+
+        function applySearch() {
+            const term = document.getElementById('searchInput').value.trim();
+            loadCases(1, term);
+        }
+
+        async function changePassword() {
+            const oldPassword = prompt('Enter your current password:');
+            if (!oldPassword) return;
+
+            const newPassword = prompt('Enter new password:');
+            if (!newPassword) return;
+
+            const confirmPassword = prompt('Confirm new password:');
+            if (confirmPassword !== newPassword) {
+                showToast('Passwords do not match', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/hr/change_password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ old_password: oldPassword, new_password: newPassword })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showToast('Password changed successfully', 'success');
+                } else {
+                    showToast(data.detail || 'Failed to change password', 'error');
+                }
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function logout() {
+            try {
+                await fetch(`${API_BASE}/hr/logout`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+
+            localStorage.removeItem('hrToken');
+            token = null;
+            showToast('Logged out', 'success');
+            showLoginForm();
+        }
+
+        function refreshData() {
+            loadCases();
+            updateStats();
+            showToast('Data refreshed', 'success');
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => toast.remove(), 3000);
+        }
     </script>
+
+    <!-- include Chart.js for analytics graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </body>
 </html>

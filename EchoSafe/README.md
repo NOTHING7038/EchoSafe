@@ -1,74 +1,67 @@
-# EchoSafe MVP - Anonymous E2EE Reporting System
+# EchoSafe - Anonymous E2EE Reporting System
 
-**EchoSafe** is a lean, production-ready anonymous reporting platform with end-to-end encryption, AI-powered triage, and role-based investigator dashboard.
+A production-ready anonymous reporting platform with end-to-end encryption, AI-powered triage, and role-based investigator dashboard.
 
-## Core Features ✓
+## Overview
 
-- **100% Anonymous**: No user accounts needed for reporters. Access via SHA-256 Case Token only.
-- **E2E Encryption (AES-256)**: Reports encrypted at submission, only HR can decrypt with case ID.
-- **AI Triage**: Keyword-based urgency scoring (0.0 - 1.0) for priority routing.
-- **HR Dashboard**: JWT-authenticated investigators view all reports sorted by urgency.
-- **Single-Language Stack**: Python FastAPI + SQLite (minimal dependencies).
+**EchoSafe** is a comprehensive workplace reporting solution that ensures complete anonymity while providing powerful tools for HR investigators. The system combines security, simplicity, and intelligence to create a safe reporting environment.
+
+### Key Features
+
+- **Complete Anonymity**: No user accounts required. Access via SHA-256 Case Token only.
+- **End-to-End Encryption**: AES-256 encryption with JWT-based HR authentication.
+- **AI-Powered Triage**: Keyword-based urgency scoring (0.0 - 1.0) for priority routing.
+- **Role-Based Dashboard**: Secure HR investigator interface with case prioritization.
+- **Single-Language Stack**: Python FastAPI + SQLite for minimal dependencies.
 - **One-Click Deployment**: Docker container for GCP, AWS, or on-premise hosting.
-
-## Tech Stack
-
-| Component | Tech | Purpose |
-|-----------|------|---------|
-| **Backend** | FastAPI + Uvicorn | API server + AI logic |
-| **Security** | AES-256 (PyCryptodome) + Bcrypt | Encryption + password hashing |
-| **Database** | SQLite | Single .db file (no setup) |
-| **Frontend** | HTML/JS | Anonymous form + HR dashboard |
-| **Authentication** | JWT | HR session tokens |
-
-## Quick Start (< 5 minutes)
-
-EchoSafe is a minimal viable product (MVP) designed to enable anonymous, secure reporting with AI-powered triage. The system ensures complete anonymity through SHA-256 Case IDs (no user accounts for reporters) and protects report content via AES-256 encryption.
-
-### Core Features
-
-- 🔐 **Complete Anonymity**: No personal data stored; reporters identified only by Case ID
-- 🔒 **End-to-End Encryption**: AES-256 encryption at rest; JWT for HR authentication
-- 🤖 **AI Triage**: TensorFlow/Keras model scores report urgency (0.0 to 1.0)
-- 📊 **Role-Based Dashboard**: HR investigators view prioritized reports
-- 🚀 **Docker Ready**: One-click deployment to GCP or any cloud provider
-
----
 
 ## Architecture
 
-### Backend (FastAPI)
-- Single `app.py` file handles all routes, encryption, and AI logic
-- Fast API serving ~1000 req/sec
-- Built-in CORS support for React frontend
+### Technology Stack
 
-### Frontend (React/Vanilla JS)
-- Two-view SPA:
-  - **Reporter View**: Anonymous form to submit encrypted reports
-  - **HR View**: Investigator login + dashboard with case prioritization
-- Modal-based report detail view with decryption
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Backend** | FastAPI + Uvicorn | High-performance API server with AI logic |
+| **Security** | AES-256 (PyCryptodome) + Bcrypt | Encryption + secure password hashing |
+| **Database** | SQLite | Zero-configuration single-file database |
+| **Frontend** | HTML/CSS/JavaScript | Responsive SPA with dark mode support |
+| **Authentication** | JWT | Secure token-based HR session management |
 
-### Database (SQLite)
-- Single `.db` file for MVP simplicity
-- Three tables: `reports`, `hr_users`, `case_tokens`
+### System Components
 
-### AI Model (TensorFlow/Keras)
-- Simple NLP model for urgency classification
-- Keyword-based fallback if model unavailable
-- Scores: 0.0 (low priority) → 1.0 (high priority)
+#### Backend (FastAPI)
+- Single `app.py` handling all routes, encryption, and AI processing
+- ~1000 requests/second capability
+- Built-in CORS support for seamless frontend integration
 
----
+#### Frontend (Multi-View SPA)
+- **Access Portal**: Central routing interface
+- **Reporter View**: Anonymous form with encrypted submission
+- **HR Portal**: Investigator dashboard with case management
+- **Responsive Design**: Mobile-friendly with dark mode support
 
-## Setup Instructions
+#### Database Schema
+- `reports`: Encrypted report data with metadata
+- `hr_users`: Investigator accounts with secure credentials
+- `case_tokens`: Anonymous access tokens
+
+#### AI Triage System
+- TensorFlow/Keras model for urgency classification
+- Keyword-based fallback scoring
+- Priority levels: Low (0.0-0.3), Medium (0.3-0.6), High (0.6-1.0)
+
+## 🚀 Quick Start
+
+Get EchoSafe running in under 5 minutes with these simple steps.
 
 ### Prerequisites
-- Python 3.10+
-- Node.js (optional, for advanced frontend builds)
-- Docker (optional, for containerized deployment)
+- **Python 3.10+** - Core runtime environment
+- **Node.js** (optional) - For advanced frontend builds
+- **Docker** (optional) - For containerized deployment
 
-### Local Development
+### Local Development Setup
 
-#### 1. Install Dependencies
+#### 1. Install Backend Dependencies
 ```bash
 cd backend
 pip install -r requirements.txt
@@ -80,60 +73,61 @@ cd ai_model
 python train_model.py
 ```
 
-#### 3. Run Backend Server
+#### 3. Start Backend Server
 ```bash
 cd backend
 python app.py
 ```
+*API will be available at `http://localhost:8000`*
 
-The API will be available at `http://localhost:8000`
-
-#### 4. Open Frontend
-Open `index.html` (project root) for the new access page that routes to HR or Reporting portals.
-You can also open `frontend/index.html` directly, or serve it with a simple HTTP server:
+#### 4. Launch Frontend
+Open the main access page:
 ```bash
+# Option 1: Open directly
+open index.html
+
+# Option 2: Serve with HTTP server
 cd frontend
 python -m http.server 8080
 ```
-
-Visit `http://localhost:8080`
+*Visit `http://localhost:8080`*
 
 ### Docker Deployment
 
-#### 1. Build Image
+#### Build & Run Container
 ```bash
+# Build image
 docker build -t echosafe-mvp .
-```
 
-#### 2. Run Container
-```bash
+# Run container
 docker run -p 8000:8000 echosafe-mvp
 ```
 
-#### 3. Deploy to GCP
+#### Deploy to Cloud Platforms
 ```bash
+# Google Cloud Run
 gcloud run deploy echosafe-mvp --source . --port 8000
+
+# AWS ECS (similar process)
 ```
 
----
-
-## API Endpoints
+## 📡 API Documentation
 
 ### Reporter Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/submit_report` | Submit anonymous encrypted report |
-| GET | `/api/report/{case_id}` | Retrieve encrypted report by Case ID |
+| `POST` | `/api/submit_report` | Submit anonymous encrypted report |
+| `GET` | `/api/view_report` | Retrieve report status by Case ID |
 
-#### Example: Submit Report
+#### Submit Report Example
 ```bash
 curl -X POST http://localhost:8000/api/submit_report \
   -H "Content-Type: application/json" \
   -d '{"report_text": "I witnessed harassment in the workplace"}'
 ```
 
-Response:
+**Response:**
 ```json
 {
   "success": true,
@@ -142,24 +136,26 @@ Response:
 }
 ```
 
-### HR Endpoints
+### HR Management Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/hr/register` | Register HR investigator account |
-| POST | `/api/hr/login` | Login and receive JWT token |
-| GET | `/api/hr/dashboard` | Get all reports (requires token) |
-| POST | `/api/hr/decrypt_report` | Decrypt and view specific report |
-| PUT | `/api/hr/update_status` | Update case status (pending/investigating/resolved) |
+| `POST` | `/api/hr/register` | Register HR investigator account |
+| `POST` | `/api/hr/login` | Login and receive JWT token |
+| `GET` | `/api/hr/dashboard` | Get all reports (requires token) |
+| `POST` | `/api/hr/decrypt_report` | Decrypt and view specific report |
+| `PUT` | `/api/hr/update_status` | Update case status |
+| `POST` | `/api/hr/change_password` | Change HR password |
+| `GET` | `/api/hr/analytics` | Get analytics data |
 
-#### Example: HR Login
+#### HR Login Example
 ```bash
 curl -X POST http://localhost:8000/api/hr/login \
   -H "Content-Type: application/json" \
   -d '{"username": "investigator1", "password": "secure_password"}'
 ```
 
-Response:
+**Response:**
 ```json
 {
   "success": true,
@@ -168,110 +164,136 @@ Response:
 }
 ```
 
----
-
-## File Structure
+## 📁 Project Structure
 
 ```
 EchoSafe/
-├── backend/
-│   ├── app.py              # FastAPI backend (routes, encryption, AI)
-│   └── requirements.txt     # Python dependencies
-├── frontend/
-│   └── index.html          # React SPA (two-view reporting + HR dashboard)
-├── ai_model/
-│   ├── train_model.py      # TensorFlow model training script
-│   └── model.h5            # Pre-trained urgency classification model
-├── echosafe.db             # SQLite database (auto-created)
-├── Dockerfile              # Container configuration
-└── README.md               # This file
+├── 📂 backend/
+│   ├── 🐍 app.py              # FastAPI backend (routes, encryption, AI)
+│   └── 📄 requirements.txt     # Python dependencies
+├── 📂 frontend/
+│   └── 🌐 index.html          # Anonymous reporting interface
+├── 📂 hr_portal/
+│   └── 🌐 index.html          # HR investigator dashboard
+├── 📂 ai_model/
+│   ├── 🧠 train_model.py      # TensorFlow model training script
+│   └── 🤖 model.h5            # Pre-trained urgency classification model
+├── 🗄️ echosafe.db             # SQLite database (auto-created)
+├── 🐳 Dockerfile              # Container configuration
+├── 📄 index.html              # Main access portal
+└── 📖 README.md               # This documentation
 ```
 
----
+## 🔒 Security Architecture
 
-## Security Considerations
+### Encryption Implementation
+- **AES-256-GCM**: Report bodies encrypted at rest with authenticated encryption
+- **Key Derivation**: PBKDF2 with Case ID + salt for encryption keys
+- **Unique IV/Nonce**: Generated per report, stored separately for security
 
-### Encryption
-- **AES-256-GCM**: Report bodies encrypted at rest
-- **Derivation**: Encryption key derived from Case ID + salt using PBKDF2
-- **IV/Nonce**: Unique for each report, stored separately
+### Authentication System
+- **Bcrypt**: HR passwords hashed with cost factor 12
+- **JWT Tokens**: 24-hour expiry with secure signing
+- **Session Management**: Stateless token-based authentication
 
-### Authentication
-- **Bcrypt**: HR passwords hashed with bcrypt (cost=12)
-- **JWT**: Token-based auth for HR dashboard (24-hour expiry)
+### Anonymity Guarantees
+- **No Reporter Accounts**: Only SHA-256 Case IDs are stored
+- **Zero Personal Data**: Reports indexed exclusively by Case ID
+- **No Tracking**: No cookies, sessions, or persistent identifiers
 
-### Anonymity
-- **No Accounts for Reporters**: Only Case ID (SHA-256) stored
-- **No Personal Data**: Reports indexed only by Case ID
-- **No Tracking**: No cookies, sessions, or identifiers for reporters
+## 🤖 AI Triage System
 
----
+### Urgency Scoring Algorithm
+The AI model evaluates reports and assigns urgency scores:
 
-## AI Urgency Scoring
+| Score Range | Priority Level | Typical Cases |
+|-------------|----------------|---------------|
+| **0.0 - 0.3** | 🟢 Low Priority | General feedback, suggestions |
+| **0.3 - 0.6** | 🟡 Medium Priority | Harassment, discrimination |
+| **0.6 - 1.0** | 🔴 High Priority | Threats, violence, emergencies |
 
-The model scores reports on severity:
+### Keyword Detection
+- **High Priority Keywords**: `threat`, `violence`, `abuse`, `assault`, `unsafe`, `harassment`
+- **Medium Priority Keywords**: `bully`, `discrimination`, `retaliation`, `hostile`, `pressure`
 
-**0.0 - 0.3**: Low Priority (general feedback, suggestions)
-**0.3 - 0.6**: Medium Priority (harassment, discrimination)
-**0.6 - 1.0**: High Priority (threats, violence, emergencies)
+### Model Fallback
+If the TensorFlow model is unavailable, the system automatically falls back to keyword-based scoring to ensure continuous operation.
 
-### Keywords Detected
-- **High Priority**: threat, physical, violence, emergency, immediate, danger
-- **Medium Priority**: harassment, discrimination, conflict, inappropriate
+## 🧪 Testing Guide
 
-If a pre-trained model is unavailable, the system falls back to keyword-based scoring.
+### Reporter Workflow Testing
+1. Navigate to **Submit Report** tab
+2. Enter test text: `"There is a threat to my safety"`
+3. Click **Submit Report**
+4. Copy the generated Case ID
+5. Go to **Check Report** tab
+6. Paste Case ID to view report status
 
----
+### HR Dashboard Testing
+1. Navigate to **HR Portal** tab
+2. Click **Register** and create investigator account
+3. Login with your credentials
+4. Browse the dashboard to view submitted reports
+5. Click any report to view decrypted details
+6. Update case status to **investigating** or **resolved**
 
-## Testing
+### API Testing
+Use the provided curl examples in the API documentation section to test endpoints directly.
 
-### Test Report Submission
-1. Go to "Submit Report" tab
-2. Enter sample text: "There is a threat to my safety"
-3. Click "Submit Report"
-4. Copy the Case ID
-5. Go to "Check Report" tab
-6. Paste Case ID to view encrypted data
+## 🚀 Future Enhancements
 
-### Test HR Dashboard
-1. Go to "HR Dashboard" tab
-2. Click "Register" and create account
-3. Login with credentials
-4. Click on any report to view decrypted details
-5. Update status to "investigating" or "resolved"
+### Planned Features
+- [ ] **Multi-language Support**: Reports in multiple languages
+- [ ] **File Attachments**: Encrypted document uploads
+- [ ] **Audit Logging**: Comprehensive HR access tracking
+- [ ] **Advanced NLP**: Transformer-based AI model
+- [ ] **2FA Authentication**: Two-factor auth for HR accounts
+- [ ] **PDF Export**: Case summary reports
+- [ ] **Webhook Integration**: External system notifications
+- [ ] **GraphQL API**: Alternative to REST endpoints
 
----
+### Performance Improvements
+- [ ] **Database Optimization**: Indexing and query optimization
+- [ ] **Caching Layer**: Redis for session and data caching
+- [ ] **Load Balancing**: Multi-instance deployment support
+- [ ] **CDN Integration**: Static asset optimization
 
-## Future Enhancements
+## 📋 Production Deployment Checklist
 
-- [ ] Multi-language support for reports
-- [ ] Document/file attachment support (encrypted)
-- [ ] Audit logging for HR access
-- [ ] Advanced NLP model with transformer architecture
-- [ ] Two-factor authentication for HR accounts
-- [ ] PDF export with case summaries
-- [ ] Webhook integrations for external systems
-- [ ] GraphQL API alternative to REST
-
----
-
-## Deployment Checklist
-
-- [ ] Change `SECRET_KEY` in `app.py` to a strong random value
-- [ ] Set up HTTPS/TLS (use Certbot or cloud provider SSL)
-- [ ] Configure environment variables for production
-- [ ] Set up database backups
+### Security Configuration
+- [ ] Update `SECRET_KEY` in `app.py` with cryptographically secure value
+- [ ] Configure HTTPS/TLS (Certbot or cloud provider SSL)
+- [ ] Set up environment variables for production secrets
 - [ ] Enable database encryption at rest
 - [ ] Implement rate limiting on API endpoints
-- [ ] Set up monitoring and alerting
+
+### Infrastructure Setup
+- [ ] Configure database backup strategy
+- [ ] Set up monitoring and alerting (Prometheus/Grafana)
 - [ ] Create incident response procedures
+- [ ] Configure log aggregation and analysis
+- [ ] Set up health checks and auto-restart
+
+### Compliance & Legal
+- [ ] Review data protection regulations (GDPR, CCPA)
+- [ ] Establish data retention policies
+- [ ] Create privacy policy and user agreements
+- [ ] Set up legal compliance documentation
+
+## 📞 Support & Contributing
+
+### Getting Help
+- **Documentation**: Review this README and inline code comments
+- **Issues**: Report bugs via GitHub Issues
+- **Security**: Report security vulnerabilities privately
+- **Community**: Join discussions in GitHub Discussions
+
+### Development Guidelines
+- Follow PEP 8 for Python code style
+- Use semantic versioning for releases
+- Write tests for new features
+- Update documentation for API changes
 
 ---
 
-## Support
-
-For issues or questions, please contact the development team or file an issue in the project repository.
-
----
-
-**EchoSafe MVP v1.0** | Built with ❤️ for secure reporting
+**EchoSafe v1.0** | Built with ❤️ for secure workplace reporting

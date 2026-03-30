@@ -3,21 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EchoSafe Access</title>
+    <title>EchoSafe - Secure Access Portal</title>
+    <meta name="description" content="EchoSafe anonymous reporting system access portal">
     <style>
+        /* CSS Variables */
         :root {
-            --bg-1: #0f1f3d;
-            --bg-2: #17305b;
-            --panel: #f5f7fb;
-            --ink: #0f172a;
-            --muted: #475569;
-            --primary: #1d4ed8;
-            --primary-dark: #1e40af;
-            --card: #ffffff;
-            --border: #dbe3f4;
+            --bg-primary: #0f1f3d;
+            --bg-secondary: #17305b;
+            --panel-bg: #f5f7fb;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --accent-primary: #1d4ed8;
+            --accent-dark: #1e40af;
+            --card-bg: #ffffff;
+            --border-color: #dbe3f4;
+            --shadow-color: rgba(2, 6, 23, 0.35);
+            --transition-speed: 0.3s;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        /* Reset & Base Styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
         body {
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
@@ -25,191 +34,468 @@
             display: grid;
             place-items: center;
             padding: 20px;
-            background: radial-gradient(circle at 15% 20%, #2f5fb0 0%, var(--bg-1) 40%, #0b162f 100%);
-            color: var(--ink);
+            background: radial-gradient(circle at 15% 20%, #2f5fb0 0%, var(--bg-primary) 40%, #0b162f 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
         }
 
+        /* Main Container */
         .shell {
             width: min(920px, 100%);
-            background: var(--panel);
+            background: var(--panel-bg);
             border: 1px solid rgba(255, 255, 255, 0.3);
             border-radius: 18px;
-            box-shadow: 0 24px 60px rgba(2, 6, 23, 0.35);
+            box-shadow: 0 24px 60px var(--shadow-color);
             overflow: hidden;
+            animation: fadeInUp 0.6s ease-out;
         }
 
-        .head {
-            background: linear-gradient(120deg, var(--bg-2), var(--bg-1));
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Header Section */
+        .header {
+            background: linear-gradient(120deg, var(--bg-secondary), var(--bg-primary));
             color: #fff;
-            padding: 24px;
+            padding: 32px 24px;
+            text-align: center;
         }
 
-        .head h1 {
-            font-size: 30px;
-            margin-bottom: 6px;
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 8px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
         }
 
-        .head p {
+        .header p {
             opacity: 0.92;
-            font-size: 14px;
+            font-size: 16px;
+            max-width: 600px;
+            margin: 0 auto;
         }
 
-        .body {
-            padding: 24px;
-            display: grid;
-            gap: 20px;
+        /* Content Section */
+        .content {
+            padding: 32px 24px;
         }
 
-        .api-box {
-            background: #fff;
-            border: 1px solid var(--border);
+        /* API Configuration Box */
+        .api-config {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
             border-radius: 12px;
-            padding: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
         }
 
-        .api-box label {
+        .api-config label {
             display: block;
-            font-size: 13px;
-            color: var(--muted);
+            font-size: 14px;
+            color: var(--text-secondary);
             margin-bottom: 8px;
             font-weight: 600;
         }
 
-        .api-box input {
+        .api-config input {
             width: 100%;
-            padding: 11px 12px;
+            padding: 12px 16px;
             border: 1px solid #c8d2ea;
             border-radius: 8px;
             font-size: 14px;
+            transition: all var(--transition-speed);
         }
 
-        .cards {
+        .api-config input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.1);
+        }
+
+        /* Portal Cards Grid */
+        .portal-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 16px;
+            gap: 20px;
+            margin-bottom: 24px;
         }
 
-        .card {
-            background: var(--card);
-            border: 1px solid var(--border);
+        .portal-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
             border-radius: 12px;
-            padding: 18px;
+            padding: 24px;
+            text-align: center;
+            transition: all var(--transition-speed);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
         }
 
-        .card h2 {
-            font-size: 20px;
-            margin-bottom: 6px;
+        .portal-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-dark));
+            transform: scaleX(0);
+            transition: transform var(--transition-speed);
         }
 
-        .card p {
-            font-size: 14px;
-            color: var(--muted);
-            margin-bottom: 14px;
-            min-height: 42px;
+        .portal-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(2, 6, 23, 0.15);
         }
 
+        .portal-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .portal-card h2 {
+            font-size: 22px;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .portal-card p {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        /* Buttons */
         .btn {
             border: none;
             border-radius: 8px;
-            padding: 10px 14px;
+            padding: 12px 20px;
             font-weight: 600;
-            color: #fff;
-            background: var(--primary);
+            font-size: 15px;
             cursor: pointer;
+            transition: all var(--transition-speed);
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: var(--accent-primary);
+            color: #fff;
             width: 100%;
         }
 
-        .btn:hover { background: var(--primary-dark); }
-
-        .meta {
-            font-size: 12px;
-            color: var(--muted);
-            margin-top: 8px;
-            text-align: center;
+        .btn-primary:hover {
+            background: var(--accent-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(29, 78, 216, 0.3);
         }
+
+        /* Quick Actions */
         .quick-actions {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 10px;
-        }
-        .quick-btn {
-            background: #fff;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 9px 10px;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--ink);
-            cursor: pointer;
-        }
-        .quick-btn:hover {
-            border-color: var(--primary);
-            color: var(--primary);
+            gap: 12px;
+            margin-bottom: 20px;
         }
 
-        @media (max-width: 760px) {
-            .cards { grid-template-columns: 1fr; }
-            .quick-actions { grid-template-columns: 1fr; }
+        .quick-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all var(--transition-speed);
+            text-align: center;
+        }
+
+        .quick-btn:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(29, 78, 216, 0.15);
+        }
+
+        /* Meta Information */
+        .meta-info {
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 16px;
+            background: rgba(29, 78, 216, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(29, 78, 216, 0.1);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .portal-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .quick-actions {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 28px;
+            }
+            
+            .header p {
+                font-size: 14px;
+            }
+            
+            .content {
+                padding: 24px 20px;
+            }
+        }
+
+        /* Loading States */
+        .loading {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
     <main class="shell">
-        <section class="head">
-            <h1>EchoSafe Access</h1>
-            <p>Select where to continue: HR Investigation Portal or Anonymous Reporting Portal.</p>
-        </section>
-        <section class="body">
-            <div class="cards">
-                <article class="card">
-                    <h2>HR Access</h2>
-                    <p>Login as investigator to review, decrypt, and manage workplace cases.</p>
-                    <button class="btn" onclick="goToPortal('hr_portal/index.html')">Open HR Login</button>
+        <!-- Header Section -->
+        <header class="header">
+            <h1>🔐 EchoSafe Access</h1>
+            <p>Choose your portal: HR Investigation Dashboard or Anonymous Reporting System</p>
+        </header>
+
+        <!-- Main Content -->
+        <section class="content">
+            <!-- API Configuration -->
+            <div class="api-config">
+                <label for="apiUrl">API Endpoint Configuration</label>
+                <input type="text" id="apiUrl" value="http://localhost:8000/api" readonly>
+            </div>
+
+            <!-- Portal Selection Cards -->
+            <div class="portal-grid">
+                <article class="portal-card" onclick="navigateToPortal('hr_portal/index.html')">
+                    <h2>👥 HR Access</h2>
+                    <p>Secure investigator portal for reviewing, decrypting, and managing workplace cases with advanced analytics.</p>
+                    <button class="btn btn-primary">Open HR Dashboard</button>
                 </article>
-                <article class="card">
-                    <h2>Anonymous Reporting</h2>
-                    <p>Submit a report or check case status without creating an account.</p>
-                    <button class="btn" onclick="goToPortal('frontend/index.html')">Open Reporting</button>
+
+                <article class="portal-card" onclick="navigateToPortal('frontend/index.html')">
+                    <h2>📝 Anonymous Reporting</h2>
+                    <p>Submit reports or check case status securely and anonymously without creating an account.</p>
+                    <button class="btn btn-primary">Open Reporting Portal</button>
                 </article>
             </div>
+
+            <!-- Quick Actions -->
             <div class="quick-actions">
-                <button class="quick-btn" onclick="openApiRoot()">Open API Root</button>
-                <button class="quick-btn" onclick="openApiDocs()">Open API Docs</button>
-                <button class="quick-btn" onclick="copyApiBase()">Copy API URL</button>
+                <button class="quick-btn" onclick="openApiRoot()">🏠 API Root</button>
+                <button class="quick-btn" onclick="openApiDocs()">📚 API Docs</button>
+                <button class="quick-btn" onclick="copyApiUrl()">📋 Copy URL</button>
             </div>
-            <p class="meta">Backend is fixed to http://localhost:8000/api.</p>
+
+            <!-- System Information -->
+            <div class="meta-info">
+                <strong>System Status:</strong> Ready | 
+                <strong>Backend:</strong> http://localhost:8001/api | 
+                <strong>Version:</strong> EchoSafe v1.0
+            </div>
         </section>
     </main>
 
     <script>
-        const API_BASE = "http://localhost:8000/api";
+        // Configuration
+        const CONFIG = {
+            API_BASE: "http://localhost:8001/api",
+            PORTALS: {
+                HR: 'http://localhost:8000',
+                REPORTING: 'http://localhost:8080'
+            }
+        };
 
-        function goToPortal(path) {
-            localStorage.setItem("echosafeApiBase", API_BASE);
-            const target = `${path}?api=${encodeURIComponent(API_BASE)}`;
-            window.location.href = target;
+        // Initialize API configuration
+        function initializeApiConfig() {
+            const apiInput = document.getElementById('apiUrl');
+            const savedApiBase = localStorage.getItem('echosafeApiBase');
+            
+            if (savedApiBase && savedApiBase !== CONFIG.API_BASE) {
+                apiInput.value = savedApiBase;
+            }
+            
+            // Store current API base
+            localStorage.setItem('echosafeApiBase', apiInput.value);
         }
 
+        // Portal navigation
+        function navigateToPortal(portalPath) {
+            const apiBase = document.getElementById('apiUrl').value;
+            localStorage.setItem('echosafeApiBase', apiBase);
+            
+            const targetUrl = `${portalPath}?api=${encodeURIComponent(apiBase)}`;
+            
+            // Add loading state
+            event.target.closest('.portal-card').classList.add('loading');
+            
+            // Navigate after brief delay for visual feedback
+            setTimeout(() => {
+                window.location.href = targetUrl;
+            }, 300);
+        }
+
+        // Quick action handlers
         function openApiRoot() {
-            const rootUrl = API_BASE.replace(/\/api$/, "");
-            window.open(rootUrl, "_blank");
+            const apiBase = document.getElementById('apiUrl').value;
+            const rootUrl = apiBase.replace(/\/api$/, '');
+            window.open(rootUrl, '_blank');
         }
 
         function openApiDocs() {
-            const docsUrl = API_BASE.replace(/\/api$/, "") + "/docs";
-            window.open(docsUrl, "_blank");
+            const apiBase = document.getElementById('apiUrl').value;
+            const docsUrl = apiBase.replace(/\/api$/, '') + '/docs';
+            window.open(docsUrl, '_blank');
         }
 
-        async function copyApiBase() {
+        async function copyApiUrl() {
+            const apiBase = document.getElementById('apiUrl').value;
+            
             try {
-                await navigator.clipboard.writeText(API_BASE);
-                alert("API URL copied.");
+                await navigator.clipboard.writeText(apiBase);
+                showToast('API URL copied to clipboard!', 'success');
             } catch (error) {
-                alert("Could not copy API URL.");
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = apiBase;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showToast('API URL copied!', 'success');
             }
         }
 
-        localStorage.setItem("echosafeApiBase", API_BASE);
+        // Toast notification system
+        function showToast(message, type = 'info') {
+            // Remove existing toast if any
+            const existingToast = document.querySelector('.toast');
+            if (existingToast) {
+                existingToast.remove();
+            }
+
+            // Create toast element
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            
+            // Style toast
+            Object.assign(toast.style, {
+                position: 'fixed',
+                bottom: '20px',
+                right: '20px',
+                background: type === 'success' ? '#10b981' : '#1d4ed8',
+                color: 'white',
+                padding: '12px 20px',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                zIndex: '1000',
+                opacity: '0',
+                transform: 'translateY(20px)',
+                transition: 'all 0.3s ease',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+            });
+
+            document.body.appendChild(toast);
+
+            // Animate in
+            requestAnimationFrame(() => {
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateY(0)';
+            });
+
+            // Remove after delay
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(20px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (event) => {
+            if (event.ctrlKey || event.metaKey) {
+                switch (event.key) {
+                    case '1':
+                        event.preventDefault();
+                        navigateToPortal(CONFIG.PORTALS.HR);
+                        break;
+                    case '2':
+                        event.preventDefault();
+                        navigateToPortal(CONFIG.PORTALS.REPORTING);
+                        break;
+                    case 'd':
+                        event.preventDefault();
+                        openApiDocs();
+                        break;
+                }
+            }
+        });
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeApiConfig();
+            
+            // Add hover effect to cards
+            const cards = document.querySelectorAll('.portal-card');
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', () => {
+                    card.style.transform = 'translateY(-4px) scale(1.02)';
+                });
+                
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+
+            // Log initialization
+            console.log('EchoSafe Access Portal initialized successfully');
+        });
+
+        // Error handling
+        window.addEventListener('error', (event) => {
+            console.error('EchoSafe Portal Error:', event.error);
+            showToast('An error occurred. Please refresh the page.', 'error');
+        });
     </script>
 </body>
 </html>

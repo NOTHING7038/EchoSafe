@@ -7,10 +7,10 @@ Usage:
 
 import os
 import sys
-import sqlite3
 from datetime import UTC, datetime
 
 import bcrypt
+from pymongo import MongoClient
 
 
 def hash_password(password: str) -> str:
@@ -28,30 +28,27 @@ def main() -> int:
         print("Username required and password must be 8+ chars.")
         return 1
 
-    database_url = os.getenv("DATABASE_URL", "echosafe.db")
+    mongodb_uri = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+    mongodb_db = os.getenv("MONGODB_DB", "echosafe")
 
-    with sqlite3.connect(database_url) as conn:
-        cursor = conn.cursor()
+    db = MongoClient(mongodb_uri)[mongodb_db]
+    users = db["hr_users"]
+    users.create_index("username", unique=True)
 
-        cursor.execute("SELECT username FROM hr_users WHERE username = ?", (username,))
-        existing = cursor.fetchone()
-        pw_hash = hash_password(password)
-
-        if existing:
-            cursor.execute("UPDATE hr_users SET password_hash = ? WHERE username = ?", (pw_hash, username))
-            print(f"Updated user: {username}")
-        else:
-            try:
-                cursor.execute(
-                    "INSERT INTO hr_users (username, password_hash, created_at) VALUES (?, ?, ?)",
-                    (username, pw_hash, datetime.now(UTC).isoformat()),
-                )
-                print(f"Created user: {username}")
-            except sqlite3.IntegrityError:
-                # This case should be rare due to the check above, but is good practice
-                print(f"Error: User {username} already exists.")
-                return 1
-        conn.commit()
+    existing = users.find_one({"username": username})
+    pw_hash = hash_password(password)
+    if existing:
+        users.update_one({"username": username}, {"$set": {"password_hash": pw_hash}})
+        print(f"Updated user: {username}")
+    else:
+        users.insert_one(
+            {
+                "username": username,
+                "password_hash": pw_hash,
+                "created_at": datetime.now(UTC),
+            }
+        )
+        print(f"Created user: {username}")
     return 0
 
 
